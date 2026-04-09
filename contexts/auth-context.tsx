@@ -94,8 +94,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (newSession?.user) {
         await refreshUsuarioData()
-        // Redirecionar para dashboard após login bem-sucedido
-        if (event === 'SIGNED_IN') {
+        // Redirecionar para dashboard após login bem-sucedido, apenas se estiver na raiz ou registro
+        if (event === 'SIGNED_IN' && (window.location.pathname === '/' || window.location.pathname === '/registro')) {
           router.push('/dashboard')
         }
       } else {

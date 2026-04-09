@@ -50,8 +50,9 @@ export default function NovoPacientePage() {
       newErrors.responsavel = "Nome do responsável é obrigatório"
     }
 
-    if (formData.telefone && !/^$$\d{2}$$\s\d{4,5}-\d{4}$/.test(formData.telefone)) {
-      newErrors.telefone = "Formato de telefone inválido. Use (11) 99999-9999"
+    // Validação de telefone flexível
+    if (formData.telefone && formData.telefone.length < 10) {
+      newErrors.telefone = "O telefone deve ter o DDD e o número"
     }
 
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
