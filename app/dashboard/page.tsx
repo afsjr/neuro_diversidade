@@ -60,7 +60,8 @@ export default function DashboardPage() {
     }
   }
 
-  if (loading) {
+  // Só mostrar skeleton se for o carregamento INICIAL e não tivermos dados
+  if (loading && stats.pacientes === 0 && !error) {
     return <DashboardSkeleton />
   }
 

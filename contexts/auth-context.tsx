@@ -89,13 +89,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Configurar listener de mudanças
     const subscription = onAuthStateChange(async (event, newSession) => {
-      setSession(newSession)
-      setUser(newSession?.user ?? null)
+      const newUser = newSession?.user ?? null
+      
+      // Só atualizar se o usuário realmente mudou (evita loops de refresh)
+      setSession(prev => (prev?.access_token === newSession?.access_token ? prev : newSession))
+      setUser(prev => {
+        if (prev?.id === newUser?.id) return prev
+        return newUser
+      })
 
-      if (newSession?.user) {
+      if (newUser) {
         await refreshUsuarioData()
-        // Redirecionar para dashboard após login bem-sucedido, apenas se estiver na raiz ou registro
-        if (event === 'SIGNED_IN' && (window.location.pathname === '/' || window.location.pathname === '/registro')) {
+        
+        // Redirecionar APENAS se estivermos na tela de login/registro e o evento for SIGNED_IN
+        const isPublicRoute = window.location.pathname === '/' || window.location.pathname === '/registro'
+        if (event === 'SIGNED_IN' && isPublicRoute) {
+          console.log('Redirecionando para dashboard após login...')
           router.push('/dashboard')
         }
       } else {
