@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm *)",
+      "Bash(kill *)",
+      "Bash(npx *)",
+      "Bash(./node_modules/.bin/tsc *)",
+      "Bash(npm install)",
+      "Bash(curl *)",
+      "Bash(node *)"
+    ]
+  },
+  "$version": 3
+}
