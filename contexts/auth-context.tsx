@@ -74,12 +74,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initializeAuth()
 
     // Configurar listener de mudanças
-    const subscription = onAuthStateChange(async (_event, newSession) => {
+    const subscription = onAuthStateChange(async (event, newSession) => {
       setSession(newSession)
       setUser(newSession?.user ?? null)
 
       if (newSession?.user) {
         await refreshUsuarioData()
+        // Redirecionar para dashboard após login bem-sucedido
+        if (event === 'SIGNED_IN') {
+          router.push('/dashboard')
+        }
       } else {
         setUsuarioData(null)
       }
@@ -101,7 +105,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (data?.user) {
-        router.push('/dashboard')
         return { success: true }
       }
 
