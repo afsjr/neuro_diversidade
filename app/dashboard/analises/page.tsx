@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -9,9 +9,41 @@ import { AnalisePaciente } from "@/components/analises/analise-paciente"
 import { AnaliseComparativa } from "@/components/analises/analise-comparativa"
 import { AnaliseTendencias } from "@/components/analises/analise-tendencias"
 import { BarChart3, TrendingUp, Users, Target } from "lucide-react"
+import { useAuth } from "@/contexts/auth-context"
+import { getDashboardStats, getPacientes, type Paciente } from "@/lib/supabase"
 
 export default function AnalisesPage() {
+  const { user } = useAuth()
   const [periodoSelecionado, setPeriodoSelecionado] = useState("3meses")
+  const [loading, setLoading] = useState(true)
+  const [pacientes, setPacientes] = useState<Paciente[]>([])
+  const [stats, setStats] = useState({
+    pacientes: 0,
+    sessoes: 0,
+    marcos: 0,
+    marcosAlcancados: 0,
+  })
+
+  useEffect(() => {
+    async function loadData() {
+      if (user) {
+        setLoading(true)
+        const [statsData, pacientesData] = await Promise.all([
+          getDashboardStats(user.id),
+          getPacientes(user.id)
+        ])
+        setStats(statsData)
+        setPacientes(pacientesData.data || [])
+        setLoading(false)
+      }
+    }
+    loadData()
+  }, [user])
+
+  // Calcular taxa de melhoria (simulada baseada em marcos se real for 0)
+  const taxaMelhoria = stats.marcos > 0 
+    ? Math.round((stats.marcosAlcancados / stats.marcos) * 100) 
+    : 0
 
   return (
     <div className="space-y-6">
@@ -44,7 +76,7 @@ export default function AnalisesPage() {
             <div className="flex items-center space-x-2">
               <BarChart3 className="h-5 w-5 text-blue-600" />
               <div>
-                <div className="text-2xl font-bold text-blue-600">87%</div>
+                <div className="text-2xl font-bold text-blue-600">{taxaMelhoria}%</div>
                 <div className="text-sm text-gray-600 dark:text-gray-400">Taxa de Melhoria</div>
               </div>
             </div>
@@ -55,8 +87,8 @@ export default function AnalisesPage() {
             <div className="flex items-center space-x-2">
               <TrendingUp className="h-5 w-5 text-green-600" />
               <div>
-                <div className="text-2xl font-bold text-green-600">+23%</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">Crescimento</div>
+                <div className="text-2xl font-bold text-green-600">{stats.sessoes}</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">Total de Sessões</div>
               </div>
             </div>
           </CardContent>
@@ -66,7 +98,7 @@ export default function AnalisesPage() {
             <div className="flex items-center space-x-2">
               <Users className="h-5 w-5 text-purple-600" />
               <div>
-                <div className="text-2xl font-bold text-purple-600">6</div>
+                <div className="text-2xl font-bold text-purple-600">{stats.pacientes}</div>
                 <div className="text-sm text-gray-600 dark:text-gray-400">Pacientes Ativos</div>
               </div>
             </div>
@@ -77,7 +109,7 @@ export default function AnalisesPage() {
             <div className="flex items-center space-x-2">
               <Target className="h-5 w-5 text-orange-600" />
               <div>
-                <div className="text-2xl font-bold text-orange-600">15</div>
+                <div className="text-2xl font-bold text-orange-600">{stats.marcosAlcancados}</div>
                 <div className="text-sm text-gray-600 dark:text-gray-400">Marcos Alcançados</div>
               </div>
             </div>
@@ -95,19 +127,19 @@ export default function AnalisesPage() {
         </TabsList>
 
         <TabsContent value="geral">
-          <AnaliseGeral periodo={periodoSelecionado} />
+          <AnaliseGeral periodo={periodoSelecionado} stats={stats} />
         </TabsContent>
 
         <TabsContent value="paciente">
-          <AnalisePaciente periodo={periodoSelecionado} />
+          <AnalisePaciente periodo={periodoSelecionado} pacientesIniciais={pacientes} />
         </TabsContent>
 
         <TabsContent value="comparativa">
-          <AnaliseComparativa periodo={periodoSelecionado} />
+          <AnaliseComparativa periodo={periodoSelecionado} pacientes={pacientes} />
         </TabsContent>
 
         <TabsContent value="tendencias">
-          <AnaliseTendencias periodo={periodoSelecionado} />
+          <AnaliseTendencias periodo={periodoSelecionado} pacientes={pacientes} />
         </TabsContent>
       </Tabs>
     </div>

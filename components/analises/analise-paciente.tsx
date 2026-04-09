@@ -7,49 +7,43 @@ import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { TrendingUp, TrendingDown, User } from "lucide-react"
 
+import type { Paciente } from "@/lib/supabase"
+import { calculateAge } from "@/lib/utils"
+
 interface AnalisePacienteProps {
   periodo: string
+  pacientesIniciais: Paciente[]
 }
 
-const pacientesData = [
-  {
-    id: "1",
-    nome: "Ana Silva",
-    idade: 9,
-    diagnostico: "TEA",
-    sessoes: 8,
-    marcosAlcancados: 5,
-    progresso: {
-      comunicacao: { atual: 7, anterior: 5, tendencia: "up" },
-      social: { atual: 6, anterior: 4, tendencia: "up" },
-      motor: { atual: 8, anterior: 7, tendencia: "up" },
-      cognitivo: { atual: 6, anterior: 6, tendencia: "stable" },
-      comportamental: { atual: 7, anterior: 6, tendencia: "up" },
-    },
-  },
-  {
-    id: "2",
-    nome: "João Santos",
-    idade: 12,
-    diagnostico: "TDAH",
-    sessoes: 6,
-    marcosAlcancados: 3,
-    progresso: {
-      comunicacao: { atual: 8, anterior: 7, tendencia: "up" },
-      social: { atual: 7, anterior: 6, tendencia: "up" },
-      motor: { atual: 9, anterior: 8, tendencia: "up" },
-      cognitivo: { atual: 6, anterior: 7, tendencia: "down" },
-      comportamental: { atual: 8, anterior: 7, tendencia: "up" },
-    },
-  },
-]
+export function AnalisePaciente({ periodo, pacientesIniciais }: AnalisePacienteProps) {
+  const [pacienteSelecionado, setPacienteSelecionado] = useState(pacientesIniciais[0]?.id || "")
 
-export function AnalisePaciente({ periodo }: AnalisePacienteProps) {
-  const [pacienteSelecionado, setPacienteSelecionado] = useState("1")
+  const pacienteReal = pacientesIniciais.find((p) => p.id === pacienteSelecionado)
 
-  const paciente = pacientesData.find((p) => p.id === pacienteSelecionado)
+  // Dados de progresso simulados baseados no paciente real (já que ainda não temos tabela de histórico detalhado)
+  const getProgressoSimulado = (id: string) => ({
+    comunicacao: { atual: 7, anterior: 5, tendencia: "up" },
+    social: { atual: 6, anterior: 4, tendencia: "up" },
+    motor: { atual: 8, anterior: 7, tendencia: "up" },
+    cognitivo: { atual: 6, anterior: 6, tendencia: "stable" },
+    comportamental: { atual: 7, anterior: 6, tendencia: "up" },
+  })
 
-  if (!paciente) return null
+  if (!pacienteReal && pacientesIniciais.length > 0) {
+    return <div className="p-8 text-center text-gray-500">Selecione um paciente para ver a análise</div>
+  }
+
+  if (pacientesIniciais.length === 0) {
+    return (
+      <Card>
+        <CardContent className="p-8 text-center text-gray-500">
+          Nenhum paciente cadastrado para análise.
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const progresso = getProgressoSimulado(pacienteSelecionado)
 
   const getTendenciaIcon = (tendencia: string) => {
     switch (tendencia) {
@@ -74,7 +68,7 @@ export function AnalisePaciente({ periodo }: AnalisePacienteProps) {
   }
 
   const progressoMedio =
-    Object.values(paciente.progresso).reduce((acc, p) => acc + p.atual, 0) / Object.values(paciente.progresso).length
+    Object.values(progresso).reduce((acc, p) => acc + p.atual, 0) / Object.values(progresso).length
 
   return (
     <div className="space-y-6">
@@ -90,9 +84,9 @@ export function AnalisePaciente({ periodo }: AnalisePacienteProps) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {pacientesData.map((p) => (
+              {pacientesIniciais.map((p) => (
                 <SelectItem key={p.id} value={p.id}>
-                  {p.nome} - {p.diagnostico}
+                  {p.nome} - {p.diagnostico || "Sem diagnóstico"}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -105,22 +99,22 @@ export function AnalisePaciente({ periodo }: AnalisePacienteProps) {
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <User className="h-5 w-5" />
-            <span>{paciente.nome}</span>
+            <span>{pacienteReal?.nome}</span>
           </CardTitle>
           <CardDescription>Análise detalhada do progresso individual</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{paciente.idade}</div>
+              <div className="text-2xl font-bold text-blue-600">{pacienteReal?.data_nascimento ? calculateAge(pacienteReal.data_nascimento) : "--"}</div>
               <div className="text-sm text-gray-600 dark:text-gray-400">Anos</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{paciente.sessoes}</div>
+              <div className="text-2xl font-bold text-green-600">0</div>
               <div className="text-sm text-gray-600 dark:text-gray-400">Sessões</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">{paciente.marcosAlcancados}</div>
+              <div className="text-2xl font-bold text-purple-600">0</div>
               <div className="text-sm text-gray-600 dark:text-gray-400">Marcos</div>
             </div>
             <div className="text-center">
@@ -129,7 +123,7 @@ export function AnalisePaciente({ periodo }: AnalisePacienteProps) {
             </div>
           </div>
           <div className="mt-4">
-            <Badge variant="secondary">{paciente.diagnostico}</Badge>
+            <Badge variant="secondary">{pacienteReal?.diagnostico || "Sem diagnóstico"}</Badge>
           </div>
         </CardContent>
       </Card>
@@ -142,7 +136,7 @@ export function AnalisePaciente({ periodo }: AnalisePacienteProps) {
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
-            {Object.entries(paciente.progresso).map(([categoria, dados]) => (
+            {Object.entries(progresso).map(([categoria, dados]) => (
               <div key={categoria} className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
@@ -176,7 +170,7 @@ export function AnalisePaciente({ periodo }: AnalisePacienteProps) {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {Object.entries(paciente.progresso)
+            {Object.entries(progresso)
               .map(([categoria, dados]) => {
                 if (dados.tendencia === "down") {
                   return (

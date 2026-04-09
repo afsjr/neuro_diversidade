@@ -6,15 +6,21 @@ import { TrendingUp, TrendingDown, Minus, Award, Target, Users } from "lucide-re
 
 interface AnaliseGeralProps {
   periodo: string
+  stats: {
+    pacientes: number
+    sessoes: number
+    marcos: number
+    marcosAlcancados: number
+  }
 }
 
-export function AnaliseGeral({ periodo }: AnaliseGeralProps) {
+export function AnaliseGeral({ periodo, stats }: AnaliseGeralProps) {
   const dadosGerais = {
-    totalPacientes: 6,
-    pacientesComMelhoria: 5,
-    marcosAlcancados: 15,
-    marcosPendentes: 8,
-    taxaMelhoria: 87,
+    totalPacientes: stats.pacientes,
+    pacientesComMelhoria: Math.ceil(stats.pacientes * 0.8), // Simulação proporcional ao real
+    marcosAlcancados: stats.marcosAlcancados,
+    marcosPendentes: stats.marcos - stats.marcosAlcancados,
+    taxaMelhoria: stats.marcos > 0 ? Math.round((stats.marcosAlcancados / stats.marcos) * 100) : 0,
     categorias: [
       { nome: "Comunicação", progresso: 85, tendencia: "up", mudanca: 12 },
       { nome: "Social", progresso: 78, tendencia: "up", mudanca: 8 },
