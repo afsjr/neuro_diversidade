@@ -50,8 +50,12 @@ ON CONFLICT (id) DO NOTHING;
 -- 3. Corrigir RLS da tabela usuarios (separar SELECT/INSERT/UPDATE/DELETE)
 -- ==========================================
 
--- Drop da policy antiga
+-- Drop de TODAS as policies existentes (inclusive as novas que podem já existir)
 DROP POLICY IF EXISTS "Usuarios podem ver apenas seus próprios dados" ON public.usuarios;
+DROP POLICY IF EXISTS "usuarios_select_own" ON public.usuarios;
+DROP POLICY IF EXISTS "usuarios_insert_own" ON public.usuarios;
+DROP POLICY IF EXISTS "usuarios_update_own" ON public.usuarios;
+DROP POLICY IF EXISTS "usuarios_delete_own" ON public.usuarios;
 
 -- SELECT: cada usuário só vê seu próprio registro
 CREATE POLICY "usuarios_select_own"
