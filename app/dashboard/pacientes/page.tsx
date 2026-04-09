@@ -38,10 +38,11 @@ export default function PacientesPage() {
 
       setPacientes(data || [])
     } catch (err: any) {
-      console.error("Erro ao carregar pacientes:", err)
+      console.error("Erro detalhado ao carregar pacientes:", err)
+      const mensagem = err.message || JSON.stringify(err)
       toast({
         title: "Erro ao carregar pacientes",
-        description: err.message || "Não foi possível carregar a lista de pacientes",
+        description: mensagem.substring(0, 100),
         variant: "destructive",
       })
     } finally {
