@@ -2,18 +2,20 @@ import { createClient } from "@supabase/supabase-js"
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn("Variáveis de ambiente do Supabase não configuradas no cliente.")
+// Debug de inicialização (ajuda a detectar Failed to Fetch por URL errada)
+if (typeof window !== 'undefined') {
+  if (!supabaseUrl || supabaseUrl === 'undefined') {
+    console.error("ERRO CRÍTICO: NEXT_PUBLIC_SUPABASE_URL não está configurada!");
+  }
 }
 
 // Criar cliente
-export const supabase = (supabaseUrl && supabaseAnonKey) 
+export const supabase = (supabaseUrl && supabaseUrl !== 'undefined' && supabaseAnonKey && supabaseAnonKey !== 'undefined') 
   ? createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: true,
-        flowType: 'pkce',
       },
     }) 
   : null
