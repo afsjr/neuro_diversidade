@@ -61,25 +61,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // nos locks do Supabase Auth (Promise.all causa lock contention)
     const initializeAuth = async () => {
       try {
-        // Usar apenas getUser() que já retorna session + user
-        const { data, error } = await supabase!.auth.getUser()
-
-        if (error) {
-          // Sessão inválida/expirada — ignorar silenciosamente
-          setUser(null)
-          setSession(null)
-        } else if (data?.user) {
-          setUser(data.user)
-          setSession(data.session)
-          await refreshUsuarioData()
+        // Obter sessão atual primeiro (mais rápido e populado pelo storage)
+        const { data: { session: initialSession } } = await supabase!.auth.getSession()
+        
+        if (initialSession) {
+          setSession(initialSession)
+          setUser(initialSession.user)
+          // Tentar carregar dados do usuário
+          const { data: dbUserData } = await supabase!.from('usuarios').select('*').eq('id', initialSession.user.id).maybeSingle()
+          setUsuarioData(dbUserData)
         } else {
-          setUser(null)
-          setSession(null)
+          // Se não tem sessão, tentar getUser por segurança
+          const { data: { user: authUser } } = await supabase!.auth.getUser()
+          if (authUser) {
+            setUser(authUser)
+            await refreshUsuarioData()
+          }
         }
       } catch (error) {
         console.error('Erro ao inicializar autenticação:', error)
-        setUser(null)
-        setSession(null)
       } finally {
         setLoading(false)
       }
