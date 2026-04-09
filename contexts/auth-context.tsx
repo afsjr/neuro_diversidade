@@ -38,8 +38,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUsuarioData(null)
       return
     }
-    const { data } = await getUsuarioData()
-    setUsuarioData(data)
+    const { data, error } = await getUsuarioData()
+    
+    // Se o usuário logado não tiver perfil no banco (erro comum após registro inicial)
+    if (!data && user) {
+      const { data: newData } = await supabase!.from('usuarios').insert([
+        {
+          id: user.id,
+          email: user.email,
+          nome: user.user_metadata?.nome || 'Usuário',
+          especialidade: user.user_metadata?.especialidade,
+        }
+      ]).select().single()
+      setUsuarioData(newData)
+    } else {
+      setUsuarioData(data)
+    }
   }, [user])
 
   useEffect(() => {
@@ -105,6 +119,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (data?.user) {
+        // Verificar se o perfil existe no banco, se não, criar (reparação automática)
+        const { data: profile } = await supabase!.from('usuarios').select('id').eq('id', data.user.id).maybeSingle()
+        
+        if (!profile) {
+          await supabase!.from('usuarios').insert([
+            {
+              id: data.user.id,
+              email: data.user.email,
+              nome: data.user.user_metadata?.nome || 'Usuário',
+              especialidade: data.user.user_metadata?.especialidade,
+            }
+          ])
+        }
+
         return { success: true }
       }
 
@@ -123,6 +151,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (data?.user) {
+        // Criar o perfil na tabela 'usuarios' imediatamente após o registro
+        const { error: dbError } = await supabase!
+          .from('usuarios')
+          .insert([
+            {
+              id: data.user.id,
+              email: email,
+              nome: nome,
+              especialidade: especialidade,
+            }
+          ])
+
+        if (dbError) {
+          console.error('Erro ao criar perfil no banco:', dbError)
+          // Não bloqueamos o sucesso, pois o usuário já foi criado no Auth
+        }
+
         return { success: true }
       }
 

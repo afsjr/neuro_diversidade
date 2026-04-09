@@ -13,10 +13,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast"
 import { ArrowLeft, User } from "lucide-react"
 import Link from "next/link"
+import { useAuth } from "@/contexts/auth-context"
+import { createPaciente } from "@/lib/supabase"
 
 export default function NovoPacientePage() {
   const router = useRouter()
   const { toast } = useToast()
+  const { user } = useAuth()
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const [formData, setFormData] = useState({
@@ -74,20 +77,40 @@ export default function NovoPacientePage() {
     setIsSubmitting(true)
 
     try {
-      // Simular salvamento no banco de dados
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      if (!user) {
+        throw new Error("Usuário não autenticado")
+      }
+
+      // Preparar dados para o Supabase
+      const novoPaciente = {
+        nome: formData.nome,
+        data_nascimento: formData.data_nascimento,
+        responsavel: formData.responsavel,
+        telefone: formData.telefone,
+        email: formData.email,
+        diagnostico: formData.diagnostico,
+        status: formData.status,
+        usuario_id: user.id
+      }
+
+      const { data, error } = await createPaciente(novoPaciente)
+
+      if (error) {
+        throw new Error(error.message)
+      }
 
       toast({
         title: "Paciente cadastrado!",
         description: "O novo paciente foi cadastrado com sucesso.",
       })
 
-      // Redirecionar para o dashboard ou para o perfil do paciente
+      // Redirecionar para o dashboard
       router.push("/dashboard")
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Erro ao cadastrar:", error)
       toast({
         title: "Erro ao cadastrar",
-        description: "Ocorreu um erro ao cadastrar o paciente. Tente novamente.",
+        description: error.message || "Ocorreu um erro ao cadastrar o paciente. Tente novamente.",
         variant: "destructive",
       })
     } finally {
