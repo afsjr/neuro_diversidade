@@ -30,6 +30,8 @@ export function LoginForm() {
           title: "Login realizado com sucesso!",
           description: "Redirecionando para o dashboard...",
         })
+        // Forçar redirecionamento manual
+        window.location.href = "/dashboard"
       } else {
         toast({
           title: "Erro no login",
