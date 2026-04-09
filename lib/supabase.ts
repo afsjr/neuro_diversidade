@@ -1,26 +1,21 @@
 import { createClient } from "@supabase/supabase-js"
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-// Verificar se as variáveis de ambiente estão definidas
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-if (!supabaseUrl) {
-  console.error("NEXT_PUBLIC_SUPABASE_URL is missing")
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn("Variáveis de ambiente do Supabase não configuradas no cliente.")
 }
 
-if (!supabaseAnonKey) {
-  console.error("NEXT_PUBLIC_SUPABASE_ANON_KEY is missing")
-}
-
-// Criar cliente apenas se as variáveis existirem
-export const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true,
-    storageKey: 'neuroacompanha-auth-token',
-  },
-}) : null
+// Criar cliente
+export const supabase = (supabaseUrl && supabaseAnonKey) 
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true,
+      },
+    }) 
+  : null
 
 // Tipos para o banco de dados
 export interface Usuario {
