@@ -1,0 +1,17 @@
+{
+  "buildCommand": "next build",
+  "outputDirectory": ".next",
+  "devCommand": "next dev",
+  "installCommand": "pnpm install",
+  "framework": "nextjs",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/"
+    }
+  ],
+  "env": {
+    "NEXT_PUBLIC_SUPABASE_URL": "https://jizabndyzfqhzdlqriss.supabase.co",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImppemFibmR5emZxaHpkbHFyaXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3MjEzNTMsImV4cCI6MjA5MTI5NzM1M30.uDus3b4Iv2cuwea8GDShSd15pr4uA4FY9kwooUvb_J0"
+  }
+}
