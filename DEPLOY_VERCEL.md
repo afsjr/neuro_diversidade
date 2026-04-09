@@ -4,7 +4,7 @@
 
 ### Passo 1: Conectar o Vercel ao GitHub
 
-1. Acesse **https://vercel.com**
+1. Acesse **<https://vercel.com>**
 2. Clique em **"Sign Up"** ou **"Log In"**
 3. Escolha **"Continue with GitHub"**
 4. Autorize o Vercel a acessar seu repositório
@@ -28,8 +28,8 @@ Na seção **"Environment Variables"**, adicione:
 
 | Nome | Valor |
 |------|-------|
-| `NEXT_PUBLIC_SUPABASE_URL` | `https://jizabndyzfqhzdlqriss.supabase.co` |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImppemFibmR5emZxaHpkbHFyaXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3MjEzNTMsImV4cCI6MjA5MTI5NzM1M30.uDus3b4Iv2cuwea8GDShSd15pr4uA4FY9kwooUvb_J0` |
+| `NEXT_PUBLIC_SUPABASE_URL` | *(copie do arquivo `.env.local` ou do dashboard do Supabase)* |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | *(copie do arquivo `.env.local` ou do dashboard do Supabase)* |
 
 ### Passo 5: Deploy
 
@@ -68,10 +68,11 @@ vercel --prod
 
 Se o deploy mostrar apenas o README em vez da aplicação:
 
-### Causa:
+### Causa
+
 O Vercel não detectou corretamente que é um projeto Next.js.
 
-### Solução:
+### Solução
 
 O arquivo `vercel.json` já foi adicionado ao repositório com as configurações corretas. Verifique se:
 
@@ -139,6 +140,6 @@ Se algo der errado:
 
 ## Links Úteis
 
-- **Vercel Dashboard**: https://vercel.com/dashboard
-- **Documentação Vercel**: https://vercel.com/docs
-- **Next.js Deploy**: https://nextjs.org/docs/deployment
+- **Vercel Dashboard**: <https://vercel.com/dashboard>
+- **Documentação Vercel**: <https://vercel.com/docs>
+- **Next.js Deploy**: <https://nextjs.org/docs/deployment>
