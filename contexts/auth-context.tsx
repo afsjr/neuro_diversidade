@@ -123,7 +123,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (data?.user) {
-        router.push('/dashboard')
         return { success: true }
       }
 
