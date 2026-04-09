@@ -1,44 +1,27 @@
 "use client"
 
 import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
-
-interface Agendamento {
-  paciente_id: string
-  paciente_nome: string
-  data: string
-  hora: string
-  duracao: number
-  tipo: "consulta" | "sessao" | "avaliacao"
-  status: "agendado" | "confirmado" | "realizado" | "cancelado"
-  observacoes?: string
-}
+import { useAuth } from "@/contexts/auth-context"
+import { getPacientes } from "@/lib/supabase"
 
 interface NovoAgendamentoFormProps {
-  onSubmit: (agendamento: Agendamento) => void
+  onSubmit: (agendamento: any) => void
   onCancel: () => void
 }
 
-// Pacientes de exemplo para o select
-const pacientesExemplo = [
-  { id: "1", nome: "Ana Silva" },
-  { id: "2", nome: "João Santos" },
-  { id: "3", nome: "Beatriz Costa" },
-  { id: "4", nome: "Pedro Oliveira" },
-  { id: "5", nome: "Sofia Mendes" },
-  { id: "6", nome: "Lucas Ferreira" },
-]
-
 export function NovoAgendamentoForm({ onSubmit, onCancel }: NovoAgendamentoFormProps) {
+  const { user } = useAuth()
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [pacientes, setPacientes] = useState<{ id: string, nome: string }[]>([])
+  const [loadingPacientes, setLoadingPacientes] = useState(true)
 
   const [formData, setFormData] = useState({
     paciente_id: "",
@@ -49,6 +32,25 @@ export function NovoAgendamentoForm({ onSubmit, onCancel }: NovoAgendamentoFormP
     status: "agendado" as const,
     observacoes: "",
   })
+
+  useEffect(() => {
+    if (user) {
+      loadPacientes()
+    }
+  }, [user])
+
+  const loadPacientes = async () => {
+    try {
+      setLoadingPacientes(true)
+      const { data, error } = await getPacientes(user!.id)
+      if (error) throw error
+      setPacientes(data || [])
+    } catch (err) {
+      console.error("Erro ao carregar pacientes para agendamento:", err)
+    } finally {
+      setLoadingPacientes(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -63,30 +65,12 @@ export function NovoAgendamentoForm({ onSubmit, onCancel }: NovoAgendamentoFormP
     }
 
     setIsSubmitting(true)
-
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      const pacienteSelecionado = pacientesExemplo.find((p) => p.id === formData.paciente_id)
-
-      const agendamento: Agendamento = {
+      const agendamento = {
         ...formData,
-        paciente_nome: pacienteSelecionado?.nome || "",
-        duracao: Number.parseInt(formData.duracao),
+        duracao: parseInt(formData.duracao),
       }
-
-      onSubmit(agendamento)
-
-      toast({
-        title: "Agendamento criado!",
-        description: "O agendamento foi criado com sucesso.",
-      })
-    } catch (error) {
-      toast({
-        title: "Erro ao criar agendamento",
-        description: "Ocorreu um erro ao criar o agendamento. Tente novamente.",
-        variant: "destructive",
-      })
+      await onSubmit(agendamento)
     } finally {
       setIsSubmitting(false)
     }
@@ -100,16 +84,20 @@ export function NovoAgendamentoForm({ onSubmit, onCancel }: NovoAgendamentoFormP
           <Select
             value={formData.paciente_id}
             onValueChange={(value) => setFormData({ ...formData, paciente_id: value })}
+            disabled={loadingPacientes}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Selecione um paciente" />
+              <SelectValue placeholder={loadingPacientes ? "Carregando..." : "Selecione um paciente"} />
             </SelectTrigger>
             <SelectContent>
-              {pacientesExemplo.map((paciente) => (
+              {pacientes.map((paciente) => (
                 <SelectItem key={paciente.id} value={paciente.id}>
                   {paciente.nome}
                 </SelectItem>
               ))}
+              {pacientes.length === 0 && !loadingPacientes && (
+                <SelectItem value="none" disabled>Nenhum paciente encontrado</SelectItem>
+              )}
             </SelectContent>
           </Select>
         </div>
@@ -185,14 +173,7 @@ export function NovoAgendamentoForm({ onSubmit, onCancel }: NovoAgendamentoFormP
           Cancelar
         </Button>
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? (
-            <>
-              <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-              Salvando...
-            </>
-          ) : (
-            "Criar Agendamento"
-          )}
+          {isSubmitting ? "Salvando..." : "Criar Agendamento"}
         </Button>
       </div>
     </form>

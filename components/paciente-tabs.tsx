@@ -4,6 +4,7 @@ import { SessoesTab } from "@/components/tabs/sessoes-tab"
 import { MarcosTab } from "@/components/tabs/marcos-tab"
 import { PlanosTratamentoTab } from "@/components/tabs/planos-tratamento-tab"
 import { ProgressoTab } from "@/components/tabs/progresso-tab"
+import { DocumentosTab } from "@/components/tabs/documentos-tab"
 
 interface PacienteTabsProps {
   pacienteId: string
@@ -12,12 +13,13 @@ interface PacienteTabsProps {
 export function PacienteTabs({ pacienteId }: PacienteTabsProps) {
   return (
     <Tabs defaultValue="perfil" className="space-y-4">
-      <TabsList className="grid w-full grid-cols-5">
+      <TabsList className="grid w-full grid-cols-6">
         <TabsTrigger value="perfil">Perfil</TabsTrigger>
         <TabsTrigger value="sessoes">Sessões</TabsTrigger>
         <TabsTrigger value="marcos">Marcos</TabsTrigger>
         <TabsTrigger value="planos">Planos</TabsTrigger>
         <TabsTrigger value="progresso">Progresso</TabsTrigger>
+        <TabsTrigger value="documentos">Documentos</TabsTrigger>
       </TabsList>
 
       <TabsContent value="perfil">
@@ -38,6 +40,10 @@ export function PacienteTabs({ pacienteId }: PacienteTabsProps) {
 
       <TabsContent value="progresso">
         <ProgressoTab pacienteId={pacienteId} />
+      </TabsContent>
+
+      <TabsContent value="documentos">
+        <DocumentosTab pacienteId={pacienteId} />
       </TabsContent>
     </Tabs>
   )

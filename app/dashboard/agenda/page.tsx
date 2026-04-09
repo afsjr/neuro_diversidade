@@ -1,82 +1,80 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Plus } from "lucide-react"
+import { Plus, Loader2 } from "lucide-react"
 import { AgendaCalendar } from "@/components/agenda/agenda-calendar"
 import { NovoAgendamentoForm } from "@/components/agenda/novo-agendamento-form"
 import { AgendamentoCard } from "@/components/agenda/agendamento-card"
-
-interface Agendamento {
-  id: string
-  paciente_id: string
-  paciente_nome: string
-  data: string
-  hora: string
-  duracao: number
-  tipo: "consulta" | "sessao" | "avaliacao"
-  status: "agendado" | "confirmado" | "realizado" | "cancelado"
-  observacoes?: string
-}
-
-// Dados de exemplo
-const agendamentosExemplo: Agendamento[] = [
-  {
-    id: "1",
-    paciente_id: "1",
-    paciente_nome: "Ana Silva",
-    data: "2024-01-22",
-    hora: "10:00",
-    duracao: 60,
-    tipo: "sessao",
-    status: "agendado",
-    observacoes: "Sessão de terapia comportamental",
-  },
-  {
-    id: "2",
-    paciente_id: "2",
-    paciente_nome: "João Santos",
-    data: "2024-01-22",
-    hora: "14:00",
-    duracao: 45,
-    tipo: "consulta",
-    status: "confirmado",
-    observacoes: "Consulta de acompanhamento",
-  },
-  {
-    id: "3",
-    paciente_id: "3",
-    paciente_nome: "Beatriz Costa",
-    data: "2024-01-23",
-    hora: "09:00",
-    duracao: 90,
-    tipo: "avaliacao",
-    status: "agendado",
-    observacoes: "Avaliação neuropsicológica inicial",
-  },
-]
+import { useAuth } from "@/contexts/auth-context"
+import { getAgendamentos, createAgendamento, type Agendamento } from "@/lib/supabase"
+import { useToast } from "@/hooks/use-toast"
 
 export default function AgendaPage() {
+  const { user } = useAuth()
+  const { toast } = useToast()
   const [showForm, setShowForm] = useState(false)
-  const [agendamentos, setAgendamentos] = useState<Agendamento[]>(agendamentosExemplo)
+  const [loading, setLoading] = useState(true)
+  const [agendamentos, setAgendamentos] = useState<Agendamento[]>([])
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
 
-  const handleAddAgendamento = (novoAgendamento: Omit<Agendamento, "id">) => {
-    const agendamento: Agendamento = {
-      ...novoAgendamento,
-      id: Date.now().toString(),
+  useEffect(() => {
+    if (user) {
+      loadAgendamentos()
     }
-    setAgendamentos([...agendamentos, agendamento])
-    setShowForm(false)
+  }, [user])
+
+  const loadAgendamentos = async () => {
+    try {
+      if (!user) return
+      setLoading(true)
+      const { data, error } = await getAgendamentos(user.id)
+      if (error) throw error
+      setAgendamentos(data || [])
+    } catch (err: any) {
+      console.error("Erro ao carregar agenda:", err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleAddAgendamento = async (novoData: any) => {
+    try {
+      if (!user) return
+      const { data, error } = await createAgendamento({
+        ...novoData,
+        usuario_id: user.id
+      })
+
+      if (error) throw error
+      
+      toast({ title: "Sucesso", description: "Agendamento realizado!" })
+      loadAgendamentos()
+      setShowForm(false)
+    } catch (err: any) {
+      toast({ 
+        title: "Erro", 
+        description: err.message || "Não foi possível agendar.",
+        variant: "destructive"
+      })
+    }
   }
 
   const agendamentosHoje = agendamentos.filter((a) => a.data === new Date().toISOString().split("T")[0])
 
-  const proximosAgendamentos = agendamentos
-    .filter((a) => new Date(a.data) >= new Date())
+  const proximosAgendamentos = [...agendamentos]
+    .filter((a) => new Date(a.data) >= new Date(new Date().setHours(0,0,0,0)))
     .sort((a, b) => new Date(a.data + " " + a.hora).getTime() - new Date(b.data + " " + b.hora).getTime())
     .slice(0, 5)
+
+  if (loading && agendamentos.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -102,9 +100,9 @@ export default function AgendaPage() {
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold text-green-600">
-              {agendamentos.filter((a) => a.status === "confirmado").length}
+              {agendamentos.filter((a) => a.status === "confirmado" || a.status === "realizado").length}
             </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Confirmados</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">Confirmados/Realizados</div>
           </CardContent>
         </Card>
         <Card>
@@ -158,13 +156,16 @@ export default function AgendaPage() {
 
       {/* Formulário de Novo Agendamento */}
       {showForm && (
-        <Card>
+        <Card id="novo-agendamento-secao">
           <CardHeader>
             <CardTitle>Novo Agendamento</CardTitle>
             <CardDescription>Agende uma nova consulta ou sessão</CardDescription>
           </CardHeader>
           <CardContent>
-            <NovoAgendamentoForm onSubmit={handleAddAgendamento} onCancel={() => setShowForm(false)} />
+            <NovoAgendamentoForm 
+              onSubmit={handleAddAgendamento} 
+              onCancel={() => setShowForm(false)} 
+            />
           </CardContent>
         </Card>
       )}

@@ -502,3 +502,169 @@ export async function getDashboardStats(usuarioId: string) {
     }
   }
 }
+
+export interface Agendamento {
+  id: string
+  paciente_id: string
+  paciente_nome?: string
+  data: string
+  hora: string
+  duracao: number
+  tipo: "consulta" | "sessao" | "avaliacao"
+  status: "agendado" | "confirmado" | "realizado" | "cancelado"
+  observacoes?: string
+  usuario_id: string
+  criado_em: string
+}
+
+// Funções para Agendamentos
+export async function getAgendamentos(usuarioId: string) {
+  try {
+    if (!isSupabaseConfigured()) {
+      return { data: [], error: null }
+    }
+
+    const { data, error } = await supabase!
+      .from("agendamentos")
+      .select("*, pacientes(nome)")
+      .eq("usuario_id", usuarioId)
+      .order("data", { ascending: true })
+
+    if (error) {
+      console.error("Erro ao buscar agendamentos:", error)
+      return { data: [], error }
+    }
+
+    // Mapear o nome do paciente vindo do join
+    const formatados = (data || []).map(a => ({
+      ...a,
+      paciente_nome: a.pacientes?.nome || "Paciente não encontrado"
+    }))
+
+    return { data: formatados, error: null }
+  } catch (error) {
+    console.error("Erro ao buscar agendamentos:", error)
+    return { data: [], error: { message: "Erro inesperado ao buscar agendamentos" } }
+  }
+}
+
+export async function createAgendamento(agendamento: Omit<Agendamento, "id" | "criado_em" | "paciente_nome">) {
+  try {
+    if (!isSupabaseConfigured()) {
+      return { data: null, error: { message: "Supabase não configurado" } }
+    }
+
+    const { data, error } = await supabase!.from("agendamentos").insert([agendamento]).select().single()
+
+    if (error) {
+      console.error("Erro ao criar agendamento:", error)
+      return { data: null, error }
+    }
+
+    return { data, error: null }
+  } catch (error) {
+    console.error("Erro ao criar agendamento:", error)
+    return { data: null, error: { message: "Erro inesperado ao criar agendamento" } }
+  }
+}
+
+export interface Documento {
+  id: string
+  paciente_id: string
+  nome: string
+  url: string
+  tipo: string
+  tamanho: number
+  criado_em: string
+  usuario_id: string
+}
+
+// Funções para Documentos (Storage + Database)
+export async function uploadDocumento(
+  pacienteId: string, 
+  usuarioId: string, 
+  file: File
+) {
+  try {
+    if (!isSupabaseConfigured()) {
+      return { data: null, error: { message: "Supabase não configurado" } }
+    }
+
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${Math.random()}.${fileExt}`
+    const filePath = `${pacienteId}/${fileName}`
+
+    // 1. Upload para o Storage
+    const { error: uploadError } = await supabase!.storage
+      .from('documentos')
+      .upload(filePath, file)
+
+    if (uploadError) throw uploadError
+
+    // 2. Pegar URL pública
+    const { data: { publicUrl } } = supabase!.storage
+      .from('documentos')
+      .getPublicUrl(filePath)
+
+    // 3. Salvar registro na tabela 'documentos'
+    const { data, error: dbError } = await supabase!
+      .from('documentos')
+      .insert([{
+        paciente_id: pacienteId,
+        usuario_id: usuarioId,
+        nome: file.name,
+        url: publicUrl,
+        tipo: file.type,
+        tamanho: file.size
+      }])
+      .select()
+      .single()
+
+    if (dbError) throw dbError
+
+    return { data, error: null }
+  } catch (error: any) {
+    console.error("Erro no upload de documento:", error)
+    return { data: null, error }
+  }
+}
+
+export async function getDocumentosByPaciente(pacienteId: string) {
+  try {
+    if (!isSupabaseConfigured()) {
+      return { data: [], error: null }
+    }
+
+    const { data, error } = await supabase!
+      .from('documentos')
+      .select('*')
+      .eq('paciente_id', pacienteId)
+      .order('criado_em', { ascending: false })
+
+    if (error) throw error
+    return { data, error: null }
+  } catch (error: any) {
+    console.error("Erro ao buscar documentos:", error)
+    return { data: [], error }
+  }
+}
+
+export async function deleteDocumento(documentoId: string, url: string) {
+  try {
+    // 1. Deletar do banco
+    const { error: dbError } = await supabase!
+      .from('documentos')
+      .delete()
+      .eq('id', documentoId)
+
+    if (dbError) throw dbError
+
+    // Nota: A limpeza do storage pode ser feita via Trigger ou manualmente
+    // Para simplificar agora, focamos no banco.
+    
+    return { error: null }
+  } catch (error: any) {
+    console.error("Erro ao deletar documento:", error)
+    return { error }
+  }
+}
