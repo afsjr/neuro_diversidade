@@ -13,7 +13,14 @@ if (!supabaseAnonKey) {
 }
 
 // Criar cliente apenas se as variáveis existirem
-export const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null
+export const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+    storageKey: 'neuroacompanha-auth-token',
+  },
+}) : null
 
 // Tipos para o banco de dados
 export interface Usuario {

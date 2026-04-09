@@ -7,11 +7,10 @@ import {
   signInUser,
   signOutUser,
   signUpUser,
-  getCurrentUser,
-  getCurrentSession,
   onAuthStateChange,
   getUsuarioData,
 } from '@/lib/supabase-auth'
+import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
 interface AuthContextType {
@@ -44,22 +43,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user])
 
   useEffect(() => {
-    // Verificar sessão inicial
+    // Verificar sessão inicial — chamadas serializadas para evitar race condition
+    // nos locks do Supabase Auth (Promise.all causa lock contention)
     const initializeAuth = async () => {
       try {
-        const [currentUser, currentSession] = await Promise.all([
-          getCurrentUser(),
-          getCurrentSession(),
-        ])
+        // Usar apenas getUser() que já retorna session + user
+        const { data, error } = await supabase!.auth.getUser()
 
-        setUser(currentUser)
-        setSession(currentSession)
-
-        if (currentUser) {
+        if (error) {
+          // Sessão inválida/expirada — ignorar silenciosamente
+          setUser(null)
+          setSession(null)
+        } else if (data?.user) {
+          setUser(data.user)
+          setSession(data.session)
           await refreshUsuarioData()
+        } else {
+          setUser(null)
+          setSession(null)
         }
       } catch (error) {
         console.error('Erro ao inicializar autenticação:', error)
+        setUser(null)
+        setSession(null)
       } finally {
         setLoading(false)
       }
