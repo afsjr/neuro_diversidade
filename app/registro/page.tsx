@@ -265,6 +265,7 @@ export default function RegistroPage() {
                         value={formData.senha}
                         onChange={(e) => handleInputChange("senha", e.target.value)}
                         className={errors.senha ? "border-red-500" : ""}
+                        autoComplete="new-password"
                       />
                       <Button
                         type="button"

@@ -51,10 +51,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           getCurrentUser(),
           getCurrentSession(),
         ])
-        
+
         setUser(currentUser)
         setSession(currentSession)
-        
+
         if (currentUser) {
           await refreshUsuarioData()
         }
@@ -71,13 +71,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const subscription = onAuthStateChange(async (_event, newSession) => {
       setSession(newSession)
       setUser(newSession?.user ?? null)
-      
+
       if (newSession?.user) {
         await refreshUsuarioData()
       } else {
         setUsuarioData(null)
       }
-      
+
       setLoading(false)
     })
 
@@ -89,16 +89,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (email: string, password: string) => {
     try {
       const { data, error } = await signInUser(email, password)
-      
+
       if (error) {
         return { success: false, error: error.message }
       }
-      
+
       if (data?.user) {
         router.push('/dashboard')
         return { success: true }
       }
-      
+
       return { success: false, error: 'Erro ao fazer login' }
     } catch (error: any) {
       return { success: false, error: error.message || 'Erro inesperado' }
@@ -108,16 +108,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUp = async (email: string, password: string, nome: string, especialidade?: string) => {
     try {
       const { data, error } = await signUpUser(email, password, nome, especialidade)
-      
+
       if (error) {
         return { success: false, error: error.message }
       }
-      
+
       if (data?.user) {
         router.push('/dashboard')
         return { success: true }
       }
-      
+
       return { success: false, error: 'Erro ao registrar usuário' }
     } catch (error: any) {
       return { success: false, error: error.message || 'Erro inesperado' }

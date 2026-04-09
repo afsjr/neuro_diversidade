@@ -107,9 +107,14 @@ export async function getUsuarioData() {
       .from('usuarios')
       .select('*')
       .eq('id', user.id)
-      .single()
+      .maybeSingle()
 
-    if (error) throw error
+    if (error) {
+      console.error('Erro ao obter dados do usuário:', error)
+      return { data: null, error }
+    }
+
+    // Retorna null se não encontrou (sem throw)
     return { data, error: null }
   } catch (error) {
     console.error('Erro ao obter dados do usuário:', error)

@@ -65,6 +65,7 @@ export function LoginForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              autoComplete="email"
             />
           </div>
           <div className="space-y-2">
@@ -76,6 +77,7 @@ export function LoginForm() {
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
               required
+              autoComplete="current-password"
             />
           </div>
           <Button type="submit" className="w-full" disabled={isLoading}>
