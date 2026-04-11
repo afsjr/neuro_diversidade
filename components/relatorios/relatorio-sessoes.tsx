@@ -1,54 +1,24 @@
 "use client"
 
-import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Calendar, Clock, TrendingUp } from "lucide-react"
+import { useEffect, useCallback } from "react"
+import { getSessoesByUser, getPacientes } from "@/lib/supabase"
+import { useAuth } from "@/contexts/auth-context"
+import { Loader2 } from "lucide-react"
 
 interface SessaoRelatorio {
   id: string
   paciente_nome: string
-  data: string
+  data_sessao: string
   duracao: number
-  tipo: string
+  tipo_profissional?: string
   status: string
-  observacoes: string
+  observacoes?: string
 }
 
-const sessoesExemplo: SessaoRelatorio[] = [
-  {
-    id: "1",
-    paciente_nome: "Ana Silva",
-    data: "2024-01-15",
-    duracao: 60,
-    tipo: "Terapia Comportamental",
-    status: "Realizada",
-    observacoes: "Boa participação, progresso visível",
-  },
-  {
-    id: "2",
-    paciente_nome: "João Santos",
-    data: "2024-01-14",
-    duracao: 45,
-    tipo: "Consulta",
-    status: "Realizada",
-    observacoes: "Acompanhamento de rotina",
-  },
-  {
-    id: "3",
-    paciente_nome: "Beatriz Costa",
-    data: "2024-01-13",
-    duracao: 90,
-    tipo: "Avaliação",
-    status: "Realizada",
-    observacoes: "Avaliação neuropsicológica completa",
-  },
-]
-
 export function RelatorioSessoes() {
+  const { user } = useAuth()
+  const [loading, setLoading] = useState(true)
+  const [sessoes, setSessoes] = useState<SessaoRelatorio[]>([])
   const [filtros, setFiltros] = useState({
     dataInicio: "",
     dataFim: "",
@@ -56,33 +26,71 @@ export function RelatorioSessoes() {
     status: "todos",
   })
 
-  const [sessoesFiltradas, setSessoesFiltradas] = useState(sessoesExemplo)
+  const [sessoesFiltradas, setSessoesFiltradas] = useState<SessaoRelatorio[]>([])
+
+  const loadSessoes = useCallback(async () => {
+    if (!user) return
+    try {
+      setLoading(true)
+      const { data, error } = await getSessoesByUser(user.id)
+      if (error) throw error
+      
+      const formatadas = (data || []).map(s => ({
+        id: s.id,
+        paciente_nome: s.paciente_nome,
+        data_sessao: s.data_sessao,
+        duracao: s.duracao,
+        tipo_profissional: s.tipo_profissional,
+        status: s.status,
+        observacoes: s.observacoes
+      }))
+      
+      setSessoes(formatadas)
+      setSessoesFiltradas(formatadas)
+    } catch (err) {
+      console.error("Erro ao carregar sessões para relatório:", err)
+    } finally {
+      setLoading(false)
+    }
+  }, [user])
+
+  useEffect(() => {
+    loadSessoes()
+  }, [loadSessoes])
 
   const aplicarFiltros = () => {
-    let sessoes = sessoesExemplo
+    let filtradas = sessoes
 
     if (filtros.dataInicio) {
-      sessoes = sessoes.filter((s) => s.data >= filtros.dataInicio)
+      filtradas = filtradas.filter((s) => s.data_sessao >= filtros.dataInicio)
     }
 
     if (filtros.dataFim) {
-      sessoes = sessoes.filter((s) => s.data <= filtros.dataFim)
+      filtradas = filtradas.filter((s) => s.data_sessao <= filtros.dataFim)
     }
 
     if (filtros.paciente) {
-      sessoes = sessoes.filter((s) => s.paciente_nome.toLowerCase().includes(filtros.paciente.toLowerCase()))
+      filtradas = filtradas.filter((s) => s.paciente_nome.toLowerCase().includes(filtros.paciente.toLowerCase()))
     }
 
     if (filtros.status !== "todos") {
-      sessoes = sessoes.filter((s) => s.status.toLowerCase() === filtros.status)
+      filtradas = filtradas.filter((s) => s.status.toLowerCase() === filtros.status)
     }
 
-    setSessoesFiltradas(sessoes)
+    setSessoesFiltradas(filtradas)
   }
 
   const totalHoras = sessoesFiltradas.reduce((acc, s) => acc + s.duracao, 0) / 60
   const mediaDuracao =
     sessoesFiltradas.length > 0 ? sessoesFiltradas.reduce((acc, s) => acc + s.duracao, 0) / sessoesFiltradas.length : 0
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -201,9 +209,9 @@ export function RelatorioSessoes() {
                 {sessoesFiltradas.map((sessao) => (
                   <tr key={sessao.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td className="p-2">{sessao.paciente_nome}</td>
-                    <td className="p-2">{new Date(sessao.data).toLocaleDateString("pt-BR")}</td>
+                    <td className="p-2">{new Date(sessao.data_sessao).toLocaleDateString("pt-BR")}</td>
                     <td className="p-2">{sessao.duracao}min</td>
-                    <td className="p-2">{sessao.tipo}</td>
+                    <td className="p-2">{sessao.tipo_profissional || "N/A"}</td>
                     <td className="p-2">
                       <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
                         {sessao.status}

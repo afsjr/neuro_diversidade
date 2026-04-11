@@ -8,7 +8,7 @@ import { AgendaCalendar } from "@/components/agenda/agenda-calendar"
 import { NovoAgendamentoForm } from "@/components/agenda/novo-agendamento-form"
 import { AgendamentoCard } from "@/components/agenda/agendamento-card"
 import { useAuth } from "@/contexts/auth-context"
-import { getAgendamentos, createAgendamento, type Agendamento } from "@/lib/supabase"
+import { getAgendamentos, createAgendamento, deleteAgendamento, type Agendamento } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
 
 export default function AgendaPage() {
@@ -144,7 +144,11 @@ export default function AgendaPage() {
             <CardContent className="space-y-4">
               {proximosAgendamentos.length > 0 ? (
                 proximosAgendamentos.map((agendamento) => (
-                  <AgendamentoCard key={agendamento.id} agendamento={agendamento} />
+                  <AgendamentoCard 
+                    key={agendamento.id} 
+                    agendamento={agendamento} 
+                    onDelete={handleDeleteAgendamento}
+                  />
                 ))
               ) : (
                 <p className="text-gray-500 dark:text-gray-400 text-center py-4">Nenhum agendamento próximo</p>

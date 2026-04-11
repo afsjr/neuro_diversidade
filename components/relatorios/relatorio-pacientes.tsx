@@ -1,58 +1,59 @@
 "use client"
 
+import { useState, useEffect, useCallback } from "react"
+import { getPacientes } from "@/lib/supabase"
+import { useAuth } from "@/contexts/auth-context"
+import { Loader2, Users, UserCheck, UserX, TrendingUp } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Users, UserCheck, UserX, TrendingUp } from "lucide-react"
 
 interface PacienteRelatorio {
   id: string
   nome: string
-  idade: number
-  diagnostico: string
+  data_nascimento: string
+  diagnostico?: string
   status: "ativo" | "inativo" | "alta"
-  totalSessoes: number
-  ultimaSessao: string
-  progresso: number
+  criado_em: string
 }
 
-const pacientesExemplo: PacienteRelatorio[] = [
-  {
-    id: "1",
-    nome: "Ana Silva",
-    idade: 9,
-    diagnostico: "TEA",
-    status: "ativo",
-    totalSessoes: 15,
-    ultimaSessao: "2024-01-15",
-    progresso: 85,
-  },
-  {
-    id: "2",
-    nome: "João Santos",
-    idade: 12,
-    diagnostico: "TDAH",
-    status: "ativo",
-    totalSessoes: 8,
-    ultimaSessao: "2024-01-14",
-    progresso: 70,
-  },
-  {
-    id: "3",
-    nome: "Beatriz Costa",
-    idade: 6,
-    diagnostico: "Atraso no Desenvolvimento",
-    status: "ativo",
-    totalSessoes: 12,
-    ultimaSessao: "2024-01-13",
-    progresso: 90,
-  },
-]
-
 export function RelatorioPacientes() {
-  const pacientesAtivos = pacientesExemplo.filter((p) => p.status === "ativo").length
-  const pacientesInativos = pacientesExemplo.filter((p) => p.status === "inativo").length
-  const pacientesAlta = pacientesExemplo.filter((p) => p.status === "alta").length
-  const progressoMedio = pacientesExemplo.reduce((acc, p) => acc + p.progresso, 0) / pacientesExemplo.length
+  const { user } = useAuth()
+  const [loading, setLoading] = useState(true)
+  const [pacientes, setPacientes] = useState<PacienteRelatorio[]>([])
+
+  const loadPacientes = useCallback(async () => {
+    if (!user) return
+    try {
+      setLoading(true)
+      const { data, error } = await getPacientes(user.id)
+      if (error) throw error
+      setPacientes(data || [])
+    } catch (err) {
+      console.error("Erro ao carregar pacientes para relatório:", err)
+    } finally {
+      setLoading(false)
+    }
+  }, [user])
+
+  useEffect(() => {
+    loadPacientes()
+  }, [loadPacientes])
+
+  const calculateAge = (dateString: string) => {
+    if (!dateString) return "N/A"
+    const today = new Date()
+    const birthDate = new Date(dateString)
+    let age = today.getFullYear() - birthDate.getFullYear()
+    const m = today.getMonth() - birthDate.getMonth()
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--
+    }
+    return `${age} anos`
+  }
+
+  const pacientesAtivos = pacientes.filter((p) => p.status === "ativo").length
+  const pacientesInativos = pacientes.filter((p) => p.status === "inativo").length
+  const pacientesAlta = pacientes.filter((p) => p.status === "alta").length
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -67,10 +68,12 @@ export function RelatorioPacientes() {
     }
   }
 
-  const getProgressoColor = (progresso: number) => {
-    if (progresso >= 80) return "text-green-600"
-    if (progresso >= 60) return "text-yellow-600"
-    return "text-red-600"
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    )
   }
 
   return (
@@ -82,7 +85,7 @@ export function RelatorioPacientes() {
             <div className="flex items-center space-x-2">
               <Users className="h-5 w-5 text-blue-600" />
               <div>
-                <div className="text-2xl font-bold text-blue-600">{pacientesExemplo.length}</div>
+                <div className="text-2xl font-bold text-blue-600">{pacientes.length}</div>
                 <div className="text-sm text-gray-600 dark:text-gray-400">Total de Pacientes</div>
               </div>
             </div>
@@ -115,8 +118,8 @@ export function RelatorioPacientes() {
             <div className="flex items-center space-x-2">
               <TrendingUp className="h-5 w-5 text-purple-600" />
               <div>
-                <div className="text-2xl font-bold text-purple-600">{progressoMedio.toFixed(0)}%</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">Progresso Médio</div>
+                <div className="text-2xl font-bold text-purple-600">{pacientesAlta}</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">Pacientes com Alta</div>
               </div>
             </div>
           </CardContent>
@@ -138,29 +141,26 @@ export function RelatorioPacientes() {
                   <th className="text-left p-2">Idade</th>
                   <th className="text-left p-2">Diagnóstico</th>
                   <th className="text-left p-2">Status</th>
-                  <th className="text-left p-2">Sessões</th>
-                  <th className="text-left p-2">Última Sessão</th>
-                  <th className="text-left p-2">Progresso</th>
+                  <th className="text-left p-2">Data Cadastro</th>
                 </tr>
               </thead>
               <tbody>
-                {pacientesExemplo.map((paciente) => (
+                {pacientes.map((paciente) => (
                   <tr key={paciente.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td className="p-2 font-medium">{paciente.nome}</td>
-                    <td className="p-2">{paciente.idade} anos</td>
-                    <td className="p-2">{paciente.diagnostico}</td>
+                    <td className="p-2">{calculateAge(paciente.data_nascimento)}</td>
+                    <td className="p-2">{paciente.diagnostico || "Não informado"}</td>
                     <td className="p-2">
                       <Badge className={getStatusColor(paciente.status)}>{paciente.status}</Badge>
                     </td>
-                    <td className="p-2">{paciente.totalSessoes}</td>
-                    <td className="p-2">{new Date(paciente.ultimaSessao).toLocaleDateString("pt-BR")}</td>
-                    <td className="p-2">
-                      <span className={`font-semibold ${getProgressoColor(paciente.progresso)}`}>
-                        {paciente.progresso}%
-                      </span>
-                    </td>
+                    <td className="p-2">{new Date(paciente.criado_em).toLocaleDateString("pt-BR")}</td>
                   </tr>
                 ))}
+                {pacientes.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="p-4 text-center text-gray-500">Nenhum paciente encontrado.</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -168,36 +168,38 @@ export function RelatorioPacientes() {
       </Card>
 
       {/* Gráfico de Distribuição por Diagnóstico */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Distribuição por Diagnóstico</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {Array.from(new Set(pacientesExemplo.map((p) => p.diagnostico))).map((diagnostico) => {
-              const count = pacientesExemplo.filter((p) => p.diagnostico === diagnostico).length
-              const percentage = (count / pacientesExemplo.length) * 100
+      {pacientes.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Distribuição por Diagnóstico</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {Array.from(new Set(pacientes.map((p) => p.diagnostico || "Não informado"))).map((diagnostico) => {
+                const count = pacientes.filter((p) => (p.diagnostico || "Não informado") === diagnostico).length
+                const percentage = (count / pacientes.length) * 100
 
-              return (
-                <div key={diagnostico} className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium">{diagnostico}</span>
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      {count} pacientes ({percentage.toFixed(0)}%)
-                    </span>
+                return (
+                  <div key={diagnostico} className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm font-medium">{diagnostico}</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        {count} pacientes ({percentage.toFixed(0)}%)
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                      <div
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${percentage}%` }}
+                      ></div>
+                    </div>
                   </div>
-                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                    <div
-                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${percentage}%` }}
-                    ></div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </CardContent>
-      </Card>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

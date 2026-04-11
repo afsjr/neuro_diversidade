@@ -252,6 +252,40 @@ export async function getSessoesByPaciente(pacienteId: string) {
   }
 }
 
+export async function getSessoesByUser(usuarioId: string) {
+  try {
+    if (!isSupabaseConfigured()) {
+      return { data: [], error: null }
+    }
+
+    const { data: pacientes } = await getPacientes(usuarioId)
+    if (!pacientes || pacientes.length === 0) return { data: [], error: null }
+
+    const pacienteIds = pacientes.map(p => p.id)
+
+    const { data, error } = await supabase!
+      .from("sessoes")
+      .select("*, pacientes(nome)")
+      .in("paciente_id", pacienteIds)
+      .order("data_sessao", { ascending: false })
+
+    if (error) {
+      console.error("Erro ao buscar sessões do usuário:", error)
+      return { data: [], error }
+    }
+
+    const formatados = (data || []).map(s => ({
+      ...s,
+      paciente_nome: s.pacientes?.nome || "Paciente não encontrado"
+    }))
+
+    return { data: formatados, error: null }
+  } catch (error) {
+    console.error("Erro ao buscar sessões do usuário:", error)
+    return { data: [], error: { message: "Erro inesperado ao buscar sessões" } }
+  }
+}
+
 export async function createSessao(sessao: Omit<Sessao, "id" | "criado_em" | "atualizado_em">) {
   try {
     if (!isSupabaseConfigured()) {
@@ -342,6 +376,40 @@ export async function getMarcosByPaciente(pacienteId: string) {
   }
 }
 
+export async function getMarcosByUser(usuarioId: string) {
+  try {
+    if (!isSupabaseConfigured()) {
+      return { data: [], error: null }
+    }
+
+    const { data: pacientes } = await getPacientes(usuarioId)
+    if (!pacientes || pacientes.length === 0) return { data: [], error: null }
+
+    const pacienteIds = pacientes.map(p => p.id)
+
+    const { data, error } = await supabase!
+      .from("marcos_desenvolvimento")
+      .select("*, pacientes(nome)")
+      .in("paciente_id", pacienteIds)
+      .order("criado_em", { ascending: false })
+
+    if (error) {
+      console.error("Erro ao buscar marcos do usuário:", error)
+      return { data: [], error }
+    }
+
+    const formatados = (data || []).map(m => ({
+      ...m,
+      paciente_nome: m.pacientes?.nome || "Paciente não encontrado"
+    }))
+
+    return { data: formatados, error: null }
+  } catch (error) {
+    console.error("Erro ao buscar marcos do usuário:", error)
+    return { data: [], error: { message: "Erro inesperado ao buscar marcos" } }
+  }
+}
+
 export async function createMarco(marco: Omit<MarcoDesenvolvimento, "id" | "criado_em" | "atualizado_em">) {
   try {
     if (!isSupabaseConfigured()) {
@@ -428,6 +496,40 @@ export async function getMetricasByPaciente(pacienteId: string) {
     return { data: data || [], error: null }
   } catch (error) {
     console.error("Erro ao buscar métricas:", error)
+    return { data: [], error: { message: "Erro inesperado ao buscar métricas" } }
+  }
+}
+
+export async function getMetricasByUser(usuarioId: string) {
+  try {
+    if (!isSupabaseConfigured()) {
+      return { data: [], error: null }
+    }
+
+    const { data: pacientes } = await getPacientes(usuarioId)
+    if (!pacientes || pacientes.length === 0) return { data: [], error: null }
+
+    const pacienteIds = pacientes.map(p => p.id)
+
+    const { data, error } = await supabase!
+      .from("metricas_progresso")
+      .select("*, pacientes(nome)")
+      .in("paciente_id", pacienteIds)
+      .order("data_registro", { ascending: false })
+
+    if (error) {
+      console.error("Erro ao buscar métricas do usuário:", error)
+      return { data: [], error }
+    }
+
+    const formatados = (data || []).map(m => ({
+      ...m,
+      paciente_nome: m.pacientes?.nome || "Paciente não encontrado"
+    }))
+
+    return { data: formatados, error: null }
+  } catch (error) {
+    console.error("Erro ao buscar métricas do usuário:", error)
     return { data: [], error: { message: "Erro inesperado ao buscar métricas" } }
   }
 }
@@ -565,6 +667,51 @@ export async function createAgendamento(agendamento: Omit<Agendamento, "id" | "c
   } catch (error) {
     console.error("Erro ao criar agendamento:", error)
     return { data: null, error: { message: "Erro inesperado ao criar agendamento" } }
+  }
+}
+
+export async function updateAgendamento(id: string, updates: Partial<Agendamento>) {
+  try {
+    if (!isSupabaseConfigured()) {
+      return { data: null, error: { message: "Supabase não configurado" } }
+    }
+
+    const { data, error } = await supabase!
+      .from("agendamentos")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single()
+
+    if (error) {
+      console.error("Erro ao atualizar agendamento:", error)
+      return { data: null, error }
+    }
+
+    return { data, error: null }
+  } catch (error) {
+    console.error("Erro ao atualizar agendamento:", error)
+    return { data: null, error: { message: "Erro inesperado ao atualizar agendamento" } }
+  }
+}
+
+export async function deleteAgendamento(id: string) {
+  try {
+    if (!isSupabaseConfigured()) {
+      return { error: { message: "Supabase não configurado" } }
+    }
+
+    const { error } = await supabase!.from("agendamentos").delete().eq("id", id)
+
+    if (error) {
+      console.error("Erro ao deletar agendamento:", error)
+      return { error }
+    }
+
+    return { error: null }
+  } catch (error) {
+    console.error("Erro ao deletar agendamento:", error)
+    return { error: { message: "Erro inesperado ao deletar agendamento" } }
   }
 }
 
