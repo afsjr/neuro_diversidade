@@ -5,6 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
+export function middleware(request: NextRequest) {
   // Middleware desativado temporariamente para resolver loop de redirecionamento (piscando)
   // A proteção é feita pelo AuthProvider no lado do cliente.
   return NextResponse.next()
