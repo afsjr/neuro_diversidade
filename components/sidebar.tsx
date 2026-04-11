@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Home,
   Database,
+  GraduationCap,
 } from "lucide-react"
 
 const navigation = [
@@ -24,6 +25,7 @@ const navigation = [
   { name: "Agenda", href: "/dashboard/agenda", icon: Calendar },
   { name: "Relatórios", href: "/dashboard/relatorios", icon: FileText },
   { name: "Análises", href: "/dashboard/analises", icon: BarChart3 },
+  { name: "Módulo Escola", href: "/dashboard/pedagogico", icon: GraduationCap },
   { name: "Configurações", href: "/dashboard/configuracoes", icon: Settings },
   { name: "Teste Conexão", href: "/dashboard/teste-conexao", icon: Database },
 ]

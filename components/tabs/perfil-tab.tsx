@@ -103,6 +103,23 @@ export function PerfilTab({ pacienteId }: PerfilTabProps) {
 
         <Card className="md:col-span-1">
           <CardHeader>
+            <CardTitle>Informações Escolares</CardTitle>
+            <CardDescription>Escola e série do estudante</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Escola / Colégio</label>
+              <p className="text-gray-900 dark:text-white">{paciente?.escola || "Não informado"}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Série / Ano</label>
+              <p className="text-gray-900 dark:text-white">{paciente?.serie || "Não informado"}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="md:col-span-1">
+          <CardHeader>
             <CardTitle>Conquistas e Badges</CardTitle>
             <CardDescription>Jornada de evolução e superação</CardDescription>
           </CardHeader>

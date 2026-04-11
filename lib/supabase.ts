@@ -46,6 +46,8 @@ export interface Paciente {
   formacao?: string
   experiencia?: string
   endereco?: string
+  escola?: string
+  serie?: string
 }
 
 export interface Sessao {
@@ -107,6 +109,19 @@ export interface PlanoTratamento {
   status: "ativo" | "concluido" | "pausado"
   criado_em: string
   atualizado_em: string
+}
+
+export interface AcompanhamentoPedagogico {
+  id: string
+  paciente_id: string
+  usuario_id: string
+  professor_nome: string
+  turma: string
+  aspectos_positivos: string
+  metas_desenvolvimento: string
+  observacoes_gerais?: string
+  data_registro: string
+  criado_em: string
 }
 
 export interface MetricaProgresso {
@@ -879,6 +894,13 @@ export async function updateUsuario(id: string, updates: Partial<Usuario>) {
       return { data: null, error }
     }
 
+    return { data, error: null }
+  } catch (error: any) {
+    console.error("Erro ao atualizar usuário:", error)
+    return { data: null, error: { message: "Erro inesperado ao atualizar usuário" } }
+  }
+}
+
 // Funções de Gamificação
 export async function getConquistasUsuario(usuarioId: string) {
   try {
@@ -976,5 +998,61 @@ export async function checkAndAwardConquistas(targetId: string, tipo: "paciente"
     }
   } catch (err) {
     console.error("Erro ao processar conquistas:", err)
+  }
+}
+
+// Funções Módulo Pedagógico
+export async function getAcompanhamentoPedagogico(pacienteId: string) {
+  try {
+    if (!isSupabaseConfigured()) return { data: [], error: null }
+
+    const { data, error } = await supabase!
+      .from("acompanhamento_pedagogico")
+      .select("*")
+      .eq("paciente_id", pacienteId)
+      .order("data_registro", { ascending: false })
+
+    if (error) throw error
+    return { data: data as AcompanhamentoPedagogico[], error: null }
+  } catch (error) {
+    console.error("Erro ao buscar registros pedagógicos:", error)
+    return { data: [], error }
+  }
+}
+
+export async function createAcompanhamentoPedagogico(registro: Omit<AcompanhamentoPedagogico, "id" | "criado_em" | "usuario_id">) {
+  try {
+    const { data: userData } = await supabase!.auth.getUser()
+    if (!userData.user) throw new Error("Usuário não autenticado")
+
+    const { data, error } = await supabase!
+      .from("acompanhamento_pedagogico")
+      .insert([{
+        ...registro,
+        usuario_id: userData.user.id
+      }])
+      .select()
+      .single()
+
+    if (error) throw error
+    return { data: data as AcompanhamentoPedagogico, error: null }
+  } catch (error) {
+    console.error("Erro ao criar registro pedagógico:", error)
+    return { data: null, error }
+  }
+}
+
+export async function deleteAcompanhamentoPedagogico(id: string) {
+  try {
+    const { error } = await supabase!
+      .from("acompanhamento_pedagogico")
+      .delete()
+      .eq("id", id)
+
+    if (error) throw error
+    return { error: null }
+  } catch (error) {
+    console.error("Erro ao excluir registro pedagógico:", error)
+    return { error }
   }
 }

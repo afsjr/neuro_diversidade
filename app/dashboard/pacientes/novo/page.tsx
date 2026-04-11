@@ -31,6 +31,8 @@ export default function NovoPacientePage() {
     diagnostico: "",
     observacoes: "",
     status: "ativo" as const,
+    escola: "",
+    serie: "",
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -91,6 +93,8 @@ export default function NovoPacientePage() {
         email: formData.email,
         diagnostico: formData.diagnostico,
         status: formData.status,
+        escola: formData.escola,
+        serie: formData.serie,
         usuario_id: user.id
       }
 
@@ -241,6 +245,33 @@ export default function NovoPacientePage() {
                     className={errors.email ? "border-red-500" : ""}
                   />
                   {errors.email && <p className="text-sm text-red-600">{errors.email}</p>}
+                </div>
+              </div>
+            </div>
+
+            {/* Informações Escolares */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Informações Escolares</h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="escola">Escola / Colégio</Label>
+                  <Input
+                    id="escola"
+                    placeholder="Nome da instituição"
+                    value={formData.escola}
+                    onChange={(e) => handleInputChange("escola", e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="serie">Série / Ano</Label>
+                  <Input
+                    id="serie"
+                    placeholder="Ex: Infantil 5, 1º Ano..."
+                    value={formData.serie}
+                    onChange={(e) => handleInputChange("serie", e.target.value)}
+                  />
                 </div>
               </div>
             </div>
