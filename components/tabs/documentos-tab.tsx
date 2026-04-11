@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { FileText, Upload, Trash2, Download, Loader2 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
-import { uploadDocumento, getDocumentosByPaciente, deleteDocumento, type Documento } from "@/lib/supabase"
+import { uploadDocumento, getDocumentosByPaciente, deleteDocumento, getPacienteById, type Documento, type Paciente } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
+import { RelatorioEvolutivoForm } from "@/components/forms/relatorio-evolutivo-form"
 
 interface DocumentosTabProps {
   pacienteId: string
@@ -19,6 +20,8 @@ export function DocumentosTab({ pacienteId }: DocumentosTabProps) {
   const [documentos, setDocumentos] = useState<Documento[]>([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
+  const [showReportForm, setShowReportForm] = useState(false)
+  const [paciente, setPaciente] = useState<Paciente | null>(null)
 
   useEffect(() => {
     loadDocumentos()
@@ -27,11 +30,18 @@ export function DocumentosTab({ pacienteId }: DocumentosTabProps) {
   const loadDocumentos = async () => {
     try {
       setLoading(true)
-      const { data, error } = await getDocumentosByPaciente(pacienteId)
-      if (error) throw error
-      setDocumentos(data || [])
+      const [docsRes, pacRes] = await Promise.all([
+        getDocumentosByPaciente(pacienteId),
+        getPacienteById(pacienteId)
+      ])
+      
+      if (docsRes.error) throw docsRes.error
+      if (pacRes.error) throw pacRes.error
+
+      setDocumentos(docsRes.data || [])
+      setPaciente(pacRes.data)
     } catch (err) {
-      console.error("Erro ao carregar documentos:", err)
+      console.error("Erro ao carregar dados:", err)
     } finally {
       setLoading(false)
     }
@@ -83,6 +93,36 @@ export function DocumentosTab({ pacienteId }: DocumentosTabProps) {
 
   return (
     <div className="space-y-6">
+      {/* Relatório Evolutivo */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Relatórios Evolutivos</CardTitle>
+              <CardDescription>Gere documentos de acompanhamento clínico para pais e escolas</CardDescription>
+            </div>
+            {!showReportForm && (
+              <Button variant="outline" onClick={() => setShowReportForm(true)}>
+                <FileText className="mr-2 h-4 w-4" />
+                Gerar Novo Relatório
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {showReportForm && paciente ? (
+            <RelatorioEvolutivoForm 
+              paciente={paciente} 
+              onCancel={() => setShowReportForm(false)} 
+            />
+          ) : (
+            <div className="text-center py-6 text-gray-500 text-sm">
+              Use esta ferramenta para consolidar automaticamente as sessões e métricas do período em um relatório formal.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
