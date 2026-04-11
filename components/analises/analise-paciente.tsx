@@ -1,13 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
-import { TrendingUp, TrendingDown, User } from "lucide-react"
+import { TrendingUp, TrendingDown, User, Loader2 } from "lucide-react"
 
-import type { Paciente } from "@/lib/supabase"
+import { getPacienteStats, type Paciente } from "@/lib/supabase"
 import { calculateAge } from "@/lib/utils"
 
 interface AnalisePacienteProps {
@@ -17,21 +17,34 @@ interface AnalisePacienteProps {
 
 export function AnalisePaciente({ periodo, pacientesIniciais }: AnalisePacienteProps) {
   const [pacienteSelecionado, setPacienteSelecionado] = useState(pacientesIniciais[0]?.id || "")
-
-  const pacienteReal = pacientesIniciais.find((p) => p.id === pacienteSelecionado)
-
-  // Dados de progresso simulados baseados no paciente real (já que ainda não temos tabela de histórico detalhado)
-  const getProgressoSimulado = (id: string) => ({
-    comunicacao: { atual: 7, anterior: 5, tendencia: "up" },
-    social: { atual: 6, anterior: 4, tendencia: "up" },
-    motor: { atual: 8, anterior: 7, tendencia: "up" },
-    cognitivo: { atual: 6, anterior: 6, tendencia: "stable" },
-    comportamental: { atual: 7, anterior: 6, tendencia: "up" },
+  const [loading, setLoading] = useState(false)
+  const [stats, setStats] = useState({
+    sessoes: 0,
+    marcos: 0,
+    marcosAlcancados: 0,
+    metricas: [] as any[]
   })
 
-  if (!pacienteReal && pacientesIniciais.length > 0) {
-    return <div className="p-8 text-center text-gray-500">Selecione um paciente para ver a análise</div>
-  }
+  const loadPacienteData = useCallback(async (id: string) => {
+    if (!id) return
+    setLoading(true)
+    try {
+      const data = await getPacienteStats(id)
+      setStats(data)
+    } catch (err) {
+      console.error("Erro ao carregar dados do paciente:", err)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (pacienteSelecionado) {
+      loadPacienteData(pacienteSelecionado)
+    }
+  }, [pacienteSelecionado, loadPacienteData])
+
+  const pacienteReal = pacientesIniciais.find((p) => p.id === pacienteSelecionado)
 
   if (pacientesIniciais.length === 0) {
     return (
@@ -43,36 +56,43 @@ export function AnalisePaciente({ periodo, pacientesIniciais }: AnalisePacienteP
     )
   }
 
-  const progresso = getProgressoSimulado(pacienteSelecionado)
-
-  const getTendenciaIcon = (tendencia: string) => {
-    switch (tendencia) {
-      case "up":
-        return <TrendingUp className="h-4 w-4 text-green-600" />
-      case "down":
-        return <TrendingDown className="h-4 w-4 text-red-600" />
-      default:
-        return <div className="h-4 w-4" />
+  // Agrupar métricas por categoria para exibir progresso
+  const metricasPorCategoria = stats.metricas.reduce((acc: any, curr) => {
+    if (!acc[curr.categoria]) {
+      acc[curr.categoria] = {
+        atual: curr.valor,
+        anterior: curr.valor, // Provisório se houver apenas um registro
+        registros: [curr.valor]
+      }
+    } else {
+      acc[curr.categoria].registros.push(curr.valor)
+      // O primeiro do array (mais recente por causa do order descript) é o atual
+      // O segundo mais recente é o "anterior" para tendência
+      if (acc[curr.categoria].registros.length > 1) {
+        acc[curr.categoria].anterior = acc[curr.categoria].registros[1]
+      }
     }
+    return acc
+  }, {})
+
+  const getTendenciaIcon = (atual: number, anterior: number) => {
+    if (atual > anterior) return <TrendingUp className="h-4 w-4 text-green-600" />
+    if (atual < anterior) return <TrendingDown className="h-4 w-4 text-red-600" />
+    return <div className="h-4 w-4" />
   }
 
-  const getTendenciaColor = (tendencia: string) => {
-    switch (tendencia) {
-      case "up":
-        return "text-green-600"
-      case "down":
-        return "text-red-600"
-      default:
-        return "text-gray-600"
-    }
+  const getTendenciaColor = (atual: number, anterior: number) => {
+    if (atual > anterior) return "text-green-600"
+    if (atual < anterior) return "text-red-600"
+    return "text-gray-600"
   }
 
-  const progressoMedio =
-    Object.values(progresso).reduce((acc, p) => acc + p.atual, 0) / Object.values(progresso).length
+  const progressoMedio = stats.metricas.length > 0 
+    ? stats.metricas.reduce((acc, m) => acc + Number(m.valor), 0) / stats.metricas.length 
+    : 0
 
   return (
     <div className="space-y-6">
-      {/* Seletor de Paciente */}
       <Card>
         <CardHeader>
           <CardTitle>Selecionar Paciente</CardTitle>
@@ -94,134 +114,80 @@ export function AnalisePaciente({ periodo, pacientesIniciais }: AnalisePacienteP
         </CardContent>
       </Card>
 
-      {/* Informações do Paciente */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <User className="h-5 w-5" />
-            <span>{pacienteReal?.nome}</span>
-          </CardTitle>
-          <CardDescription>Análise detalhada do progresso individual</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{pacienteReal?.data_nascimento ? calculateAge(pacienteReal.data_nascimento) : "--"}</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Anos</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">0</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Sessões</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">0</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Marcos</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-orange-600">{progressoMedio.toFixed(1)}</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Progresso Médio</div>
-            </div>
-          </div>
-          <div className="mt-4">
-            <Badge variant="secondary">{pacienteReal?.diagnostico || "Sem diagnóstico"}</Badge>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Progresso Detalhado */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Progresso por Categoria</CardTitle>
-          <CardDescription>Evolução detalhada em cada área de desenvolvimento</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-6">
-            {Object.entries(progresso).map(([categoria, dados]) => (
-              <div key={categoria} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <span className="font-medium capitalize">{categoria}</span>
-                    {getTendenciaIcon(dados.tendencia)}
+      {loading ? (
+        <div className="flex justify-center p-12">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        </div>
+      ) : (
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <User className="h-5 w-5" />
+                <span>{pacienteReal?.nome}</span>
+              </CardTitle>
+              <CardDescription>Análise detalhada do progresso individual</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {pacienteReal?.data_nascimento ? calculateAge(pacienteReal.data_nascimento) : "--"}
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm font-medium">{dados.atual}/10</span>
-                    <span className={`text-xs ${getTendenciaColor(dados.tendencia)}`}>
-                      {dados.atual > dados.anterior ? "+" : dados.atual < dados.anterior ? "" : ""}
-                      {dados.atual - dados.anterior !== 0 ? dados.atual - dados.anterior : "="}
-                    </span>
-                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Anos</div>
                 </div>
-                <Progress value={(dados.atual / 10) * 100} className="h-3" />
-                <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
-                  <span>Anterior: {dados.anterior}/10</span>
-                  <span>Atual: {dados.atual}/10</span>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">{stats.sessoes}</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Sessões</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-purple-600">{stats.marcosAlcancados}</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Marcos</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-orange-600">{progressoMedio.toFixed(1)}</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Progresso Médio</div>
                 </div>
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              <div className="mt-4">
+                <Badge variant="secondary">{pacienteReal?.diagnostico || "Sem diagnóstico"}</Badge>
+              </div>
+            </CardContent>
+          </Card>
 
-      {/* Recomendações Específicas */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recomendações Personalizadas</CardTitle>
-          <CardDescription>Sugestões baseadas no progresso do paciente</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {Object.entries(progresso)
-              .map(([categoria, dados]) => {
-                if (dados.tendencia === "down") {
-                  return (
-                    <div
-                      key={categoria}
-                      className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800"
-                    >
-                      <div className="flex items-start space-x-2">
-                        <TrendingDown className="h-5 w-5 text-red-600 mt-0.5" />
-                        <div>
-                          <h4 className="font-medium text-red-800 dark:text-red-200 capitalize">
-                            Atenção: {categoria}
-                          </h4>
-                          <p className="text-sm text-red-700 dark:text-red-300">
-                            Esta área apresentou declínio. Considere revisar as estratégias de intervenção e aumentar o
-                            foco nas atividades relacionadas.
-                          </p>
+          <Card>
+            <CardHeader>
+              <CardTitle>Progresso por Categoria</CardTitle>
+              <CardDescription>Baseado nas métricas de progresso registradas</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {Object.entries(metricasPorCategoria).length > 0 ? (
+                  Object.entries(metricasPorCategoria).map(([categoria, dados]: [string, any]) => (
+                    <div key={categoria} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <span className="font-medium capitalize">{categoria}</span>
+                          {getTendenciaIcon(dados.atual, dados.anterior)}
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm font-medium">{dados.atual}/10</span>
+                          <span className={`text-xs ${getTendenciaColor(dados.atual, dados.anterior)}`}>
+                            {dados.atual > dados.anterior ? "+" : ""}{dados.atual - dados.anterior !== 0 ? (dados.atual - dados.anterior).toFixed(1) : "="}
+                          </span>
                         </div>
                       </div>
+                      <Progress value={(dados.atual / 10) * 100} className="h-3" />
                     </div>
-                  )
-                }
-
-                if (dados.tendencia === "up" && dados.atual >= 8) {
-                  return (
-                    <div
-                      key={categoria}
-                      className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800"
-                    >
-                      <div className="flex items-start space-x-2">
-                        <TrendingUp className="h-5 w-5 text-green-600 mt-0.5" />
-                        <div>
-                          <h4 className="font-medium text-green-800 dark:text-green-200 capitalize">
-                            Excelente: {categoria}
-                          </h4>
-                          <p className="text-sm text-green-700 dark:text-green-300">
-                            Ótimo progresso nesta área! Continue com as estratégias atuais e considere aumentar a
-                            complexidade dos exercícios.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                }
-
-                return null
-              })
-              .filter(Boolean)}
-          </div>
-        </CardContent>
-      </Card>
+                  ))
+                ) : (
+                  <p className="text-center text-gray-500 py-4">Nenhuma métrica registrada para este paciente.</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   )
 }

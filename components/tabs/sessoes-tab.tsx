@@ -9,13 +9,15 @@ import { Plus, Search, Filter, Calendar } from "lucide-react"
 import { SessaoForm } from "@/components/forms/sessao-form"
 import { SessaoCard } from "@/components/sessao-card"
 import { useToast } from "@/hooks/use-toast"
-import { getSessoesByPaciente, createSessao, updateSessao, deleteSessao, type Sessao } from "@/lib/supabase"
+import { getSessoesByPaciente, createSessao, updateSessao, deleteSessao, checkAndAwardConquistas, type Sessao } from "@/lib/supabase"
+import { useAuth } from "@/contexts/auth-context"
 
 interface SessoesTabProps {
   pacienteId: string
 }
 
 export function SessoesTab({ pacienteId }: SessoesTabProps) {
+  const { user } = useAuth()
   const { toast } = useToast()
   const [showForm, setShowForm] = useState(false)
   const [editingSessao, setEditingSessao] = useState<Sessao | null>(null)
@@ -63,6 +65,13 @@ export function SessoesTab({ pacienteId }: SessoesTabProps) {
         setSessoes((prev) => [data, ...prev])
         setShowForm(false)
         setEditingSessao(null)
+
+        // Verificar conquistas para o profissional e para o paciente
+        if (user) {
+          checkAndAwardConquistas(user.id, "profissional")
+          checkAndAwardConquistas(pacienteId, "paciente")
+        }
+
         toast({
           title: "Sessão criada",
           description: "Sessão registrada com sucesso",

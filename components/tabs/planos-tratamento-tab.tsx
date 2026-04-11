@@ -4,9 +4,10 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Calendar, Target } from "lucide-react"
-import { getPlanosByPaciente, type PlanoTratamento } from "@/lib/supabase"
+import { Plus, Calendar, Target, Loader2 } from "lucide-react"
+import { getPlanosByPaciente, getPacienteById, type PlanoTratamento, type Paciente } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
+import { NovoPlanoForm } from "@/components/forms/novo-plano-form"
 
 interface PlanosTratamentoTabProps {
   pacienteId: string
@@ -14,29 +15,33 @@ interface PlanosTratamentoTabProps {
 
 export function PlanosTratamentoTab({ pacienteId }: PlanosTratamentoTabProps) {
   const [planos, setPlanos] = useState<PlanoTratamento[]>([])
+  const [paciente, setPaciente] = useState<Paciente | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [loading, setLoading] = useState(true)
   const { toast } = useToast()
 
   useEffect(() => {
-    loadPlanos()
+    loadData()
   }, [pacienteId])
 
-  const loadPlanos = async () => {
+  const loadData = async () => {
     try {
       setLoading(true)
-      const { data, error } = await getPlanosByPaciente(pacienteId)
+      const [planosRes, pacienteRes] = await Promise.all([
+        getPlanosByPaciente(pacienteId),
+        getPacienteById(pacienteId)
+      ])
 
-      if (error) {
-        throw new Error(error.message)
-      }
+      if (planosRes.error) throw new Error(planosRes.error.message)
+      if (pacienteRes.error) throw new Error(pacienteRes.error.message)
 
-      setPlanos(data || [])
+      setPlanos(planosRes.data || [])
+      setPaciente(pacienteRes.data)
     } catch (error: any) {
-      console.error("Erro ao carregar planos:", error)
+      console.error("Erro ao carregar dados:", error)
       toast({
-        title: "Erro ao carregar planos",
-        description: error.message || "Não foi possível carregar os planos de tratamento",
+        title: "Erro ao carregar dados",
+        description: error.message || "Não foi possível carregar as informações",
         variant: "destructive",
       })
     } finally {
@@ -72,12 +77,8 @@ export function PlanosTratamentoTab({ pacienteId }: PlanosTratamentoTabProps) {
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        {Array.from({ length: 2 }).map((_, i) => (
-          <div key={i} className="animate-pulse">
-            <div className="bg-gray-200 dark:bg-gray-700 rounded-lg h-32"></div>
-          </div>
-        ))}
+      <div className="flex justify-center p-12">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
       </div>
     )
   }
@@ -89,25 +90,25 @@ export function PlanosTratamentoTab({ pacienteId }: PlanosTratamentoTabProps) {
           <h3 className="text-lg font-medium">Planos de Tratamento</h3>
           <p className="text-sm text-gray-600 dark:text-gray-400">Gerencie os planos terapêuticos do paciente</p>
         </div>
-        <Button onClick={() => setShowForm(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Novo Plano
-        </Button>
+        {!showForm && (
+          <Button onClick={() => setShowForm(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Novo Plano
+          </Button>
+        )}
       </div>
 
-      {showForm && (
+      {showForm && paciente && (
         <Card>
-          <CardHeader>
-            <CardTitle>Novo Plano de Tratamento</CardTitle>
-            <CardDescription>Crie um novo plano terapêutico para o paciente</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-              <p>Formulário de criação de plano em desenvolvimento</p>
-              <Button variant="outline" onClick={() => setShowForm(false)} className="mt-4">
-                Fechar
-              </Button>
-            </div>
+          <CardContent className="pt-6">
+            <NovoPlanoForm 
+              paciente={paciente} 
+              onSuccess={() => {
+                setShowForm(false)
+                loadData()
+              }} 
+              onCancel={() => setShowForm(false)} 
+            />
           </CardContent>
         </Card>
       )}
@@ -131,11 +132,11 @@ export function PlanosTratamentoTab({ pacienteId }: PlanosTratamentoTabProps) {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-700 dark:text-gray-300">{plano.descricao}</p>
+                <p className="text-gray-700 dark:text-gray-300 whitespace-pre-line">{plano.descricao}</p>
               </CardContent>
             </Card>
           ))
-        ) : (
+        ) : !showForm ? (
           <Card>
             <CardContent className="text-center py-8">
               <p className="text-gray-500 dark:text-gray-400">Nenhum plano de tratamento cadastrado</p>
@@ -145,7 +146,7 @@ export function PlanosTratamentoTab({ pacienteId }: PlanosTratamentoTabProps) {
               </Button>
             </CardContent>
           </Card>
-        )}
+        ) : null}
       </div>
     </div>
   )

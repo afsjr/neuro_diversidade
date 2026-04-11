@@ -10,8 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
-import { Calendar, Target, Brain, Heart, Zap, MessageCircle, Activity } from "lucide-react"
+import { Calendar, Target, Brain, Heart, Zap, MessageCircle, Activity, HelpCircle } from "lucide-react"
 import type { Sessao } from "@/lib/supabase"
+import { InfoTooltip } from "@/components/ui/info-tooltip"
 
 interface SessaoFormProps {
   pacienteId: string
@@ -310,7 +311,10 @@ ${formData.medicacao ? `MEDICAÇÃO: ${formData.medicacao}` : ""}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="tipo_profissional">Tipo de Profissional</Label>
+              <div className="flex items-center space-x-2">
+                <Label htmlFor="tipo_profissional">Tipo de Profissional</Label>
+                <InfoTooltip content="Selecione sua especialidade. O acompanhamento multidisciplinar oferece uma visão 360º fundamental para o desenvolvimento neurodivergente." />
+              </div>
               <Select
                 value={formData.tipo_profissional}
                 onValueChange={(value) => handleInputChange("tipo_profissional", value)}
@@ -330,7 +334,10 @@ ${formData.medicacao ? `MEDICAÇÃO: ${formData.medicacao}` : ""}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="medicacao">Medicação (nome, dosagem, efeitos)</Label>
+              <div className="flex items-center space-x-2">
+                <Label htmlFor="medicacao">Medicação (nome, dosagem, efeitos)</Label>
+                <InfoTooltip content="Registre se houve uso de medicação recente. Isso ajuda a diferenciar respostas terapêuticas de efeitos colaterais ou variações químicas." />
+              </div>
               <Input
                 id="medicacao"
                 placeholder="Ex: Ritalina 10mg - melhora na atenção"
@@ -349,7 +356,10 @@ ${formData.medicacao ? `MEDICAÇÃO: ${formData.medicacao}` : ""}
             <Brain className="h-5 w-5" />
             Áreas de Desenvolvimento
           </CardTitle>
-          <CardDescription>Avalie o desenvolvimento em cada área (1=Muito Baixo, 5=Excelente)</CardDescription>
+          <div className="flex items-center space-x-2">
+            <CardDescription>Avalie o desenvolvimento em cada área (1=Muito Baixo, 5=Excelente)</CardDescription>
+            <InfoTooltip content="Esta escala é um guia qualitativo. Foque na evolução do paciente em relação a si mesmo, não em comparativos externos." />
+          </div>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="comportamental" className="w-full">
@@ -463,7 +473,10 @@ ${formData.medicacao ? `MEDICAÇÃO: ${formData.medicacao}` : ""}
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Estado de Humor</Label>
+                  <div className="flex items-center space-x-2">
+                    <Label>Estado de Humor</Label>
+                    <InfoTooltip content="Observe além do técnico. Como o paciente se sentiu hoje? O estado emocional é a base para qualquer ganho cognitivo." />
+                  </div>
                   <Select
                     value={areasDesenvolvimento.emocional.estado_humor}
                     onValueChange={(value) => handleAreaChange("emocional", "estado_humor", value)}
@@ -748,7 +761,10 @@ ${formData.medicacao ? `MEDICAÇÃO: ${formData.medicacao}` : ""}
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="objetivos">Objetivos da Sessão {formData.status === "realizada" && "*"}</Label>
+            <div className="flex items-center space-x-2">
+              <Label htmlFor="objetivos">Objetivos da Sessão {formData.status === "realizada" && "*"}</Label>
+              <InfoTooltip content="Mantenha os objetivos claros e alcançáveis. Eles são a bússola que potencializa o resultado final da intervenção." />
+            </div>
             <Textarea
               id="objetivos"
               placeholder="Descreva os objetivos trabalhados nesta sessão..."
