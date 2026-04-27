@@ -1,7 +1,7 @@
 'use client'
 
 import type React from 'react'
-import { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import type { User, Session } from '@supabase/supabase-js'
 import {
   signInUser,
@@ -66,6 +66,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user])
 
   useEffect(() => {
+    const initializedRef = { current: false }
+    
     const initializeAuth = async () => {
       try {
         const { data: { session: initialSession } } = await supabase!.auth.getSession()
@@ -86,6 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('Erro ao inicializar autenticação:', error)
       } finally {
         setAuthLoading(false)
+        initializedRef.current = true
         setInitialized(true)
       }
     }
@@ -93,7 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initializeAuth()
 
     const subscription = onAuthStateChange(async (event, newSession) => {
-      if (!initialized) return // Ignorar mudanças durante inicialização
+      if (!initializedRef.current) return
       
       const newUser = newSession?.user ?? null
       
@@ -189,7 +192,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push('/')
   }
 
-  const value = {
+  const value = useMemo(() => ({
     user,
     session,
     usuarioData,
@@ -200,7 +203,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp,
     signOut,
     refreshUsuarioData,
-  }
+  }), [user, session, usuarioData, authLoading, dataLoading, initialized, signIn, signUp, signOut, refreshUsuarioData])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

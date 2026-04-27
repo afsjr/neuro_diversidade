@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DashboardSkeleton } from "@/components/dashboard-skeleton"
 import { getDashboardStats, isSupabaseConfigured } from "@/lib/supabase"
@@ -19,26 +19,27 @@ export default function DashboardPage() {
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [dataLoaded, setDataLoaded] = useState(false)
+  const loadAttempted = useRef(false)
   const { toast } = useToast()
 
   useEffect(() => {
-    if (!authLoading && user) {
+    if (!authLoading && user && !loadAttempted.current && !dataLoaded) {
+      loadAttempted.current = true
       loadStats()
     }
-  }, [user, authLoading])
+  }, [user, authLoading, dataLoaded])
 
   const loadStats = async () => {
     try {
       setLoading(true)
       setError(null)
 
-      // Verificar se o Supabase está configurado
       if (!isSupabaseConfigured()) {
         setError("Banco de dados não configurado. Verifique as variáveis de ambiente.")
         return
       }
 
-      // Verificar se usuário está autenticado
       if (!user) {
         setError("Usuário não autenticado")
         return
@@ -47,6 +48,7 @@ export default function DashboardPage() {
       const usuarioId = user.id
       const data = await getDashboardStats(usuarioId)
       setStats(data)
+      setDataLoaded(true)
     } catch (error) {
       console.error("Erro ao carregar estatísticas:", error)
       setError("Não foi possível carregar as estatísticas do dashboard")
@@ -61,7 +63,7 @@ export default function DashboardPage() {
   }
 
   // Só mostrar skeleton se for o carregamento INICIAL e não tivermos dados
-  if (loading && stats.pacientes === 0 && !error) {
+  if (loading && !dataLoaded && !error) {
     return <DashboardSkeleton />
   }
 
