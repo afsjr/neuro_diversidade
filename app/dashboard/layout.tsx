@@ -1,8 +1,6 @@
 import type React from "react"
-import { Suspense } from "react"
 import { Header } from "@/components/header"
 import { Sidebar } from "@/components/sidebar"
-import { DashboardSkeleton } from "@/components/dashboard-skeleton"
 
 export default function DashboardLayout({
   children,
@@ -14,11 +12,7 @@ export default function DashboardLayout({
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header />
-        <main className="flex-1 overflow-auto p-6">
-          <Suspense fallback={<DashboardSkeleton />}>
-            {children}
-          </Suspense>
-        </main>
+        <main className="flex-1 overflow-auto p-6">{children}</main>
       </div>
     </div>
   )
