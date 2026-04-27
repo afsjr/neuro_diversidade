@@ -19,6 +19,7 @@ interface AuthContextType {
   usuarioData: any | null
   authLoading: boolean
   dataLoading: boolean
+  initialized: boolean
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
   signUp: (email: string, password: string, nome: string, especialidade?: string) => Promise<{ success: boolean; error?: string }>
   signOut: () => Promise<void>
@@ -33,6 +34,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [usuarioData, setUsuarioData] = useState<any | null>(null)
   const [authLoading, setAuthLoading] = useState(true)
   const [dataLoading, setDataLoading] = useState(false)
+  const [initialized, setInitialized] = useState(false)
   const router = useRouter()
 
   const refreshUsuarioData = useCallback(async () => {
@@ -84,12 +86,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('Erro ao inicializar autenticação:', error)
       } finally {
         setAuthLoading(false)
+        setInitialized(true)
       }
     }
 
     initializeAuth()
 
     const subscription = onAuthStateChange(async (event, newSession) => {
+      if (!initialized) return // Ignorar mudanças durante inicialização
+      
       const newUser = newSession?.user ?? null
       
       setUser(newUser)
@@ -190,6 +195,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     usuarioData,
     authLoading,
     dataLoading,
+    initialized,
     signIn,
     signUp,
     signOut,
