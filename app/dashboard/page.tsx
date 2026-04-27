@@ -10,7 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useAuth } from "@/contexts/auth-context"
 
 export default function DashboardPage() {
-  const { user, loading: authLoading } = useAuth()
+  const { user, authLoading } = useAuth()
   const [stats, setStats] = useState({
     pacientes: 0,
     sessoes: 0,

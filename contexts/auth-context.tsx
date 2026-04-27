@@ -17,7 +17,8 @@ interface AuthContextType {
   user: User | null
   session: Session | null
   usuarioData: any | null
-  loading: boolean
+  authLoading: boolean
+  dataLoading: boolean
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
   signUp: (email: string, password: string, nome: string, especialidade?: string) => Promise<{ success: boolean; error?: string }>
   signOut: () => Promise<void>
@@ -30,7 +31,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [usuarioData, setUsuarioData] = useState<any | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [authLoading, setAuthLoading] = useState(true)
+  const [dataLoading, setDataLoading] = useState(false)
   const router = useRouter()
 
   const refreshUsuarioData = useCallback(async () => {
@@ -38,56 +40,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUsuarioData(null)
       return
     }
-    const { data, error } = await getUsuarioData()
-    
-    // Se o usuário logado não tiver perfil no banco (erro comum após registro inicial)
-    if (!data && user) {
-      const { data: newData } = await supabase!.from('usuarios').insert([
-        {
-          id: user.id,
-          email: user.email,
-          nome: user.user_metadata?.nome || 'Usuário',
-          especialidade: user.user_metadata?.especialidade,
-        }
-      ]).select().single()
-      setUsuarioData(newData)
-    } else {
-      setUsuarioData(data)
+    setDataLoading(true)
+    try {
+      const { data, error } = await getUsuarioData()
+      if (!data && user) {
+        const { data: newData } = await supabase!.from('usuarios').insert([
+          {
+            id: user.id,
+            email: user.email,
+            nome: user.user_metadata?.nome || 'Usuário',
+            especialidade: user.user_metadata?.especialidade,
+          }
+        ]).select().single()
+        setUsuarioData(newData)
+      } else {
+        setUsuarioData(data)
+      }
+    } catch (error) {
+      console.error('Erro ao buscar dados do usuário:', error)
+    } finally {
+      setDataLoading(false)
     }
   }, [user])
 
   useEffect(() => {
-    // Verificar sessão inicial — chamadas serializadas para evitar race condition
-    // nos locks do Supabase Auth (Promise.all causa lock contention)
     const initializeAuth = async () => {
       try {
-        // Obter sessão atual primeiro (mais rápido e populado pelo storage)
         const { data: { session: initialSession } } = await supabase!.auth.getSession()
         
         if (initialSession) {
           setSession(initialSession)
           setUser(initialSession.user)
-          // Tentar carregar dados do usuário
           const { data: dbUserData } = await supabase!.from('usuarios').select('*').eq('id', initialSession.user.id).maybeSingle()
           setUsuarioData(dbUserData)
         } else {
-          // Se não tem sessão, tentar getUser por segurança
           const { data: { user: authUser } } = await supabase!.auth.getUser()
           if (authUser) {
             setUser(authUser)
-            await refreshUsuarioData()
+            await getUsuarioData()
           }
         }
       } catch (error) {
         console.error('Erro ao inicializar autenticação:', error)
       } finally {
-        setLoading(false)
+        setAuthLoading(false)
       }
     }
 
     initializeAuth()
 
-    // Configurar listener de mudanças
     const subscription = onAuthStateChange(async (event, newSession) => {
       const newUser = newSession?.user ?? null
       
@@ -95,19 +96,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(newSession)
 
       if (newUser) {
-        refreshUsuarioData()
+        await getUsuarioData()
       } else {
         setUsuarioData(null)
       }
 
-      // Só desativa o loading na primeira vez ou quando realmente mudar
-      setLoading(false)
+      setAuthLoading(false)
     })
 
     return () => {
       subscription.unsubscribe()
     }
-  }, [refreshUsuarioData])
+  }, [])
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -188,7 +188,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     session,
     usuarioData,
-    loading,
+    authLoading,
+    dataLoading,
     signIn,
     signUp,
     signOut,
